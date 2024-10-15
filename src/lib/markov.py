@@ -74,7 +74,6 @@ class MarkovChain:
 
     def learn(self, source: str):
         tokens = self._parse_source(source.lower())
-        print(tokens)
         self._learn_from_tokens(tokens)
 
     def _pick_next(self, current_token: Token, allow_end: bool) -> Token:

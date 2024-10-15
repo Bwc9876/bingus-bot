@@ -10,28 +10,27 @@ class Markov(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.reply_channels = [int(x) for x in os.getenv("REPLY_CHANNELS", "0").split(",")]
+        self.reply_channels = [int(x) for x in os.getenv("Markov.REPLY_CHANNELS", "0").split(",")]
         self.markov = MarkovChain({})
 
     @commands.slash_command()
-    async def scan_history(self, ctx):
+    async def scan_history(self, ctx: discord.ApplicationContext):
         buf = []
         await ctx.defer()
         async for msg in ctx.history(limit=None):
-            print("Learning...")
             if msg.author.id != self.bot.application_id:
                 buf.append(msg.content)
         self.markov.learn(" ".join(buf))
         await ctx.respond("Bingus Learned!")
 
     @commands.slash_command()
-    async def markov(self, ctx, prompt: discord.Option(str)):
+    async def markov(self, ctx: discord.ApplicationContext, prompt: discord.Option(str)):
         print("Bingus is responding!")
         response = self.markov.respond(prompt)
         if response is not None and len(response) != 0:
             await ctx.respond(response)
         else:
-            await ctx.respond(":: Bingus couldn't think of what to say!")
+            await ctx.respond("> Bingus couldn't think of what to say!")
         print("Bingus Responded!")
 
 

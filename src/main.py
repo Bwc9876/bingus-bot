@@ -3,6 +3,8 @@
 from dotenv import load_dotenv
 from discord import Bot
 import discord
+import json
+from pathlib import Path
 from os import getenv
 
 class BingusBot(Bot):
@@ -11,13 +13,19 @@ class BingusBot(Bot):
 
 load_dotenv()
 
-print("Initializing...")
+print("Initializing Base Bot...")
 
 intents = discord.Intents.default()
 intents.message_content = True
 
 bot = BingusBot(intents=intents)
 
-bot.load_extension("cogs.markov")
+EXTENSIONS: list[str] = json.loads(Path(__file__).parent.joinpath("cogs.json").read_text())
+
+for ext in EXTENSIONS:
+    print(f"Initializing \"{ext}\"...")
+    bot.load_extension(ext)
+
+print("Connecting to Discord...")
 
 bot.run(getenv("TOKEN"))
