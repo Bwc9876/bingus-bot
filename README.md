@@ -39,6 +39,7 @@ knowledge of what tokens the current token has been proceeded by.
   usually has to reply
 - `/scan_history`: Scan the history of the current channel and add it to the chain. Since Bingus only learns
   from *new* messages while he's active, you may need to do this when restarting him. This command can take a while depending on the number of messages.
+- `/weights`: Dump the weights of the specified token to other tokens
 
 #### Markov Config
 

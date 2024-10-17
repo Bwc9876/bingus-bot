@@ -6,6 +6,9 @@ from typing import Optional
 class Word:
     text: str
 
+    def __str__(self):
+        return self.text
+
     def __eq__(self, value: object):
         return self.text == value.text
 
@@ -14,6 +17,9 @@ class Word:
 
 @dataclass
 class End:
+
+    def __str__(self):
+        return "~END"
     
     def __hash__(self):
         return hash("END")
@@ -71,6 +77,13 @@ class MarkovChain:
 
     def _parse_source(self, source: str) -> list[Token]:
         return [Word(w) for w in source.split() if not (w.startswith("<@") and w.endswith(">"))]
+
+    def get_edges(self, token: str) -> Optional[dict[str, int]]:
+        edges = self.edges.get(Word(token))
+        if edges is None:
+            return None
+        else:
+            return edges.to_tokens
 
     def learn(self, source: str):
         tokens = self._parse_source(source.lower())
