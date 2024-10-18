@@ -19,7 +19,6 @@ class Markov(commands.Cog):
 
     @commands.slash_command()
     async def scan_history(self, ctx: discord.ApplicationContext):
-        buf = []
         await ctx.defer()
         async for msg in ctx.history(limit=None):
             if msg.author.id != self.bot.application_id:

@@ -76,7 +76,7 @@ class MarkovChain:
                 self._update(token, tokens[i + 1])
 
     def _parse_source(self, source: str) -> list[Token]:
-        return [Word(w) for w in source.split() if not (w.startswith("<@") and w.endswith(">"))]
+        return [Word(w if w.startswith("http://") or w.startswith("https://") else w.lower()) for w in source.split() if not (w.startswith("<@") and w.endswith(">"))]
 
     def get_edges(self, token: str) -> Optional[dict[str, int]]:
         edges = self.edges.get(Word(token))
@@ -86,7 +86,7 @@ class MarkovChain:
             return edges.to_tokens
 
     def learn(self, source: str):
-        tokens = self._parse_source(source.lower())
+        tokens = self._parse_source(source)
         self._learn_from_tokens(tokens)
 
     def _pick_next(self, current_token: Token, allow_end: bool) -> Token:
