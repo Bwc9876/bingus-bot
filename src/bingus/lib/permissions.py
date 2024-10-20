@@ -1,5 +1,6 @@
 import discord
 
+
 class NotOwnerError(discord.ApplicationCommandError):
 
     def __init__(self) -> None:
@@ -11,7 +12,7 @@ def _check_owners(ctx: discord.ApplicationContext):
         raise NotOwnerError()
     else:
         return True
-    
+
 
 def require_owner(cmd: discord.SlashCommand):
     cmd.checks.append(_check_owners)

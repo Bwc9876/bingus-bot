@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "bingus"
+repository = "https://github.com/Bwc9876/bingus-bot"
+version = "0.1.0"
+description = "The world's most clever kitty cat"
+authors = ["Ben C <bwc9876@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+py-cord = "^2.6.1"
+python-dotenv = "^1.0.1"
+
+[tool.poetry.scripts]
+bingus = "bingus.main:main"
+new_cog = "bingus.dev.new_cog:main"
+main = "bingus.main:main"
+format = "bingus.dev.format:main"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.10.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

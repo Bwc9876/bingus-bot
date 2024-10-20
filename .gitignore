@@ -1,5 +1,8 @@
 *.pyc
 .venv/
 venv/
+dist/
+result
+__pycache__
 
 *.env

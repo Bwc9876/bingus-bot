@@ -1,23 +1,27 @@
-
 import random
 import os
 import io
 import discord
 from discord.ext import commands
 from discord.message import Message
-from lib.markov import MarkovChain
-from lib.permissions import require_owner
+from ..lib.markov import MarkovChain
+from ..lib.permissions import require_owner
+
 
 class Markov(commands.Cog):
 
     def __init__(self, bot: discord.bot.Bot):
         self.bot = bot
-        self.reply_channels = [int(x) for x in os.getenv("Markov.REPLY_CHANNELS", "0").split(",")]
+        self.reply_channels = [
+            int(x) for x in os.getenv("Markov.REPLY_CHANNELS", "0").split(",")
+        ]
         self.markov = MarkovChain({})
 
     async def update_words(self):
         amount = len(self.markov.edges.keys())
-        await self.bot.change_presence(activity=discord.CustomActivity(name=f"I know {amount} words!"))
+        await self.bot.change_presence(
+            activity=discord.CustomActivity(name=f"I know {amount} words!")
+        )
 
     @require_owner
     @commands.slash_command()
@@ -28,7 +32,9 @@ class Markov(commands.Cog):
 
     @require_owner
     @commands.slash_command()
-    async def load_chain(self, ctx: discord.ApplicationContext, raw: discord.Option(discord.Attachment)):
+    async def load_chain(
+        self, ctx: discord.ApplicationContext, raw: discord.Option(discord.Attachment)
+    ):
         j = (await raw.read()).decode("utf-8")
         new = MarkovChain.load(j)
         self.markov.merge(new)
@@ -46,7 +52,9 @@ class Markov(commands.Cog):
         await self.update_words()
 
     @commands.slash_command()
-    async def markov(self, ctx: discord.ApplicationContext, prompt: discord.Option(str)):
+    async def markov(
+        self, ctx: discord.ApplicationContext, prompt: discord.Option(str)
+    ):
         print("Bingus is responding!")
         response = self.markov.respond(prompt)
         if response is not None and len(response) != 0:
@@ -56,13 +64,15 @@ class Markov(commands.Cog):
         print("Bingus Responded!")
 
     @commands.slash_command()
-    async def weights(self, ctx: discord.ApplicationContext, token: discord.Option(str)):
+    async def weights(
+        self, ctx: discord.ApplicationContext, token: discord.Option(str)
+    ):
         edges = self.markov.get_edges(token)
         if edges is None:
             await ctx.respond("> Bingus doesn't know that word!")
         else:
             head = f"Weights for **{token}**"
-            msg = '\n'.join([f"{str(k)}: {v}" for k, v in edges.items()])
+            msg = "\n".join([f"{str(k)}: {v}" for k, v in edges.items()])
             if len(msg) > 1750:
                 fd = io.BytesIO(msg.encode())
                 await ctx.respond(head, file=discord.File(fd, filename="weights.txt"))
@@ -72,7 +82,7 @@ class Markov(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, msg: Message):
 
-        if msg.flags.ephemeral:
+        if msg.flags.ephemeral or msg.channel.id == msg.author.dm_channel.id:
             return
 
         if msg.author.id != self.bot.application_id:
@@ -92,6 +102,7 @@ class Markov(commands.Cog):
                 else:
                     await msg.reply(response[:1000], mention_author=False)
             print("Bingus Responded!")
+
 
 def setup(bot):
     bot.add_cog(Markov(bot))

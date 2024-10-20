@@ -3,6 +3,7 @@ import random
 import json
 from typing import Optional
 
+
 @dataclass
 class Word:
     text: str
@@ -16,16 +17,19 @@ class Word:
     def __hash__(self):
         return hash("WORD:" + self.text)
 
+
 @dataclass
 class End:
 
     def __str__(self):
         return "~END"
-    
+
     def __hash__(self):
         return hash("END")
 
+
 Token = Word | End
+
 
 def token_ser(t: Token) -> str:
     match t:
@@ -34,18 +38,21 @@ def token_ser(t: Token) -> str:
         case End:
             return f"E--"
 
+
 def token_de(s: str) -> Token:
     if s.startswith("W-"):
         return Word(s[2:])
     else:
         return End()
 
+
 def token_is_word(t: Token) -> bool:
     match t:
-        case Word(_): 
+        case Word(_):
             return True
         case _:
             return False
+
 
 def token_is_end(t: Token) -> bool:
     match t:
@@ -54,8 +61,9 @@ def token_is_end(t: Token) -> bool:
         case _:
             return False
 
+
 @dataclass
-class StateTransitions():
+class StateTransitions:
     to_tokens: dict[Token, int]
 
     def merge(self, other):
@@ -71,14 +79,19 @@ class StateTransitions():
         self.to_tokens[to_token] += 1
 
     def pick_token(self, allow_end: bool = False) -> Optional[Token]:
-        entries = [e for e in self.to_tokens.items() if allow_end or not token_is_end(e[0])]
+        entries = [
+            e for e in self.to_tokens.items() if allow_end or not token_is_end(e[0])
+        ]
         if len(entries) == 0:
             return None
         else:
-            return random.choices([k for (k, _) in entries], weights=[v for (_, v) in entries])[0]
+            return random.choices(
+                [k for (k, _) in entries], weights=[v for (_, v) in entries]
+            )[0]
+
 
 @dataclass
-class MarkovChain():
+class MarkovChain:
     edges: dict[Token, StateTransitions]
 
     def _update(self, from_token: Token, to_token: Token):
@@ -90,14 +103,20 @@ class MarkovChain():
             self.edges[from_token].register_transition(to_token)
 
     def _learn_from_tokens(self, tokens: list[Token]):
-        for (i, token) in enumerate(tokens):
+        for i, token in enumerate(tokens):
             if i == len(tokens) - 1:
                 self._update(token, End())
             else:
                 self._update(token, tokens[i + 1])
 
     def _parse_source(self, source: str) -> list[Token]:
-        return [Word(w if w.startswith("http://") or w.startswith("https://") else w.lower()) for w in source.split() if not (w.startswith("<@") and w.endswith(">"))]
+        return [
+            Word(
+                w if w.startswith("http://") or w.startswith("https://") else w.lower()
+            )
+            for w in source.split()
+            if not (w.startswith("<@") and w.endswith(">"))
+        ]
 
     def get_edges(self, token: str) -> Optional[dict[str, int]]:
         edges = self.edges.get(Word(token))
@@ -120,10 +139,10 @@ class MarkovChain():
                 return End()
             else:
                 return next
-            
+
     def _join_tokens(self, tokens: list[Token]) -> str:
         buf = []
-        for (i, c) in enumerate(tokens):
+        for i, c in enumerate(tokens):
             match c:
                 case End():
                     pass
@@ -131,9 +150,10 @@ class MarkovChain():
                     buf.append(text + " " if i < len(tokens) - 1 else text)
         return "".join(buf)
 
-            
-    def _chain_tokens(self, starting_token: Optional[Token] = None, max_length: int = 20) -> list[Token]:
-        
+    def _chain_tokens(
+        self, starting_token: Optional[Token] = None, max_length: int = 20
+    ) -> list[Token]:
+
         tokens = []
 
         if starting_token is None:
@@ -143,7 +163,7 @@ class MarkovChain():
             else:
                 starting_token = random.choice(list(keys))
                 tokens.append(starting_token)
-        
+
         current_token = starting_token
 
         while len(tokens) < max_length:
@@ -156,12 +176,14 @@ class MarkovChain():
             current_token = next_token
 
         return tokens
-    
-    def _chain(self, starting_token: Optional[Token] = None, max_length: int = 20) -> str:
+
+    def _chain(
+        self, starting_token: Optional[Token] = None, max_length: int = 20
+    ) -> str:
         tokens = self._chain_tokens(starting_token, max_length)
         joined = self._join_tokens(tokens)
         return joined
-    
+
     def respond(self, message: str, max_length: int = 20) -> str:
         tokens = self._parse_source(message)
         tt = [x for x in filter(token_is_word, tokens)]
@@ -169,13 +191,21 @@ class MarkovChain():
             return self._chain(tt[-1], max_length=max_length)
         else:
             return self._chain(None, max_length=max_length)
-        
+
     def dump(self) -> str:
-        return json.dumps({token_ser(e): {token_ser(k): v for k, v in w.to_tokens.items()} for e, w in self.edges.items()})
+        return json.dumps(
+            {
+                token_ser(e): {token_ser(k): v for k, v in w.to_tokens.items()}
+                for e, w in self.edges.items()
+            }
+        )
 
     def load(source: str):
         dat = json.loads(source)
-        edges = {token_de(e): StateTransitions({token_de(k): v for k, v in w.items()}) for e, w in dat.items()}
+        edges = {
+            token_de(e): StateTransitions({token_de(k): v for k, v in w.items()})
+            for e, w in dat.items()
+        }
         return MarkovChain(edges)
 
     def merge(self, other):

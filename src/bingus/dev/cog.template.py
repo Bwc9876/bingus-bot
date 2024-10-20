@@ -1,7 +1,7 @@
-
 import discord
 from discord.ext import commands
 from discord.message import Message
+
 
 class __CName__(commands.Cog):
 
@@ -26,6 +26,7 @@ class __CName__(commands.Cog):
     #     pass
 
     # See the PyCord docs for more info and guides
+
 
 def setup(bot):
     bot.add_cog(__CName__(bot))
