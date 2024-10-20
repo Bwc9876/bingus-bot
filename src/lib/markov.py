@@ -59,7 +59,7 @@ class StateTransitions():
     to_tokens: dict[Token, int]
 
     def merge(self, other):
-        for key, val in other.items():
+        for key, val in other.to_tokens.items():
             if key in self.to_tokens.keys():
                 self.to_tokens[key] += val
             else:
