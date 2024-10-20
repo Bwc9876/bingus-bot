@@ -1,10 +1,12 @@
 
 import random
 import os
+import io
 import discord
 from discord.ext import commands
 from discord.message import Message
 from lib.markov import MarkovChain
+from lib.permissions import require_owner
 
 class Markov(commands.Cog):
 
@@ -17,6 +19,23 @@ class Markov(commands.Cog):
         amount = len(self.markov.edges.keys())
         await self.bot.change_presence(activity=discord.CustomActivity(name=f"I know {amount} words!"))
 
+    @require_owner
+    @commands.slash_command()
+    async def dump_chain(self, ctx: discord.ApplicationContext):
+        o = self.markov.dump()
+        fd = io.BytesIO(o.encode())
+        await ctx.respond(ephemeral=True, file=discord.File(fd, filename="brain.json"))
+
+    @require_owner
+    @commands.slash_command()
+    async def load_chain(self, ctx: discord.ApplicationContext, raw: discord.Option(discord.Attachment)):
+        j = (await raw.read()).decode("utf-8")
+        new = MarkovChain.load(j)
+        self.markov.merge(new)
+        await ctx.respond("Imported", ephemeral=True)
+        await self.update_words()
+
+    @require_owner
     @commands.slash_command()
     async def scan_history(self, ctx: discord.ApplicationContext):
         await ctx.defer()
@@ -42,11 +61,20 @@ class Markov(commands.Cog):
         if edges is None:
             await ctx.respond("> Bingus doesn't know that word!")
         else:
-            msg = '\n'.join([f"**{str(k)}**: {v}" for k, v in edges.items()])
-            await ctx.respond(f"Weights for **{token}**:\n{msg}")
+            head = f"Weights for **{token}**"
+            msg = '\n'.join([f"{str(k)}: {v}" for k, v in edges.items()])
+            if len(msg) > 1750:
+                fd = io.BytesIO(msg.encode())
+                await ctx.respond(head, file=discord.File(fd, filename="weights.txt"))
+            else:
+                await ctx.respond(f"{head}:\n{msg}")
 
     @commands.Cog.listener()
     async def on_message(self, msg: Message):
+
+        if msg.flags.ephemeral:
+            return
+
         if msg.author.id != self.bot.application_id:
             print("Bingus is learning!")
             self.markov.learn(msg.content)

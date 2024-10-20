@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import random
+import json
 from typing import Optional
 
 @dataclass
@@ -26,6 +27,19 @@ class End:
 
 Token = Word | End
 
+def token_ser(t: Token) -> str:
+    match t:
+        case Word(w):
+            return f"W-{w}"
+        case End:
+            return f"E--"
+
+def token_de(s: str) -> Token:
+    if s.startswith("W-"):
+        return Word(s[2:])
+    else:
+        return End()
+
 def token_is_word(t: Token) -> bool:
     match t:
         case Word(_): 
@@ -41,8 +55,15 @@ def token_is_end(t: Token) -> bool:
             return False
 
 @dataclass
-class StateTransitions:
+class StateTransitions():
     to_tokens: dict[Token, int]
+
+    def merge(self, other):
+        for key, val in other.items():
+            if key in self.to_tokens.keys():
+                self.to_tokens[key] += val
+            else:
+                self.to_tokens[key] = val
 
     def register_transition(self, to_token: Token):
         if self.to_tokens.get(to_token) is None:
@@ -57,7 +78,7 @@ class StateTransitions:
             return random.choices([k for (k, _) in entries], weights=[v for (_, v) in entries])[0]
 
 @dataclass
-class MarkovChain:
+class MarkovChain():
     edges: dict[Token, StateTransitions]
 
     def _update(self, from_token: Token, to_token: Token):
@@ -148,5 +169,21 @@ class MarkovChain:
             return self._chain(tt[-1], max_length=max_length)
         else:
             return self._chain(None, max_length=max_length)
+        
+    def dump(self) -> str:
+        return json.dumps({token_ser(e): {token_ser(k): v for k, v in w.to_tokens.items()} for e, w in self.edges.items()})
+
+    def load(source: str):
+        dat = json.loads(source)
+        edges = {token_de(e): StateTransitions({token_de(k): v for k, v in w.items()}) for e, w in dat.items()}
+        return MarkovChain(edges)
+
+    def merge(self, other):
+        for key, val in other.edges.items():
+            if key in self.edges.keys():
+                self.edges[key].merge(val)
+            else:
+                self.edges[key] = val
+
 
 __all__ = (MarkovChain,)
