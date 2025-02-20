@@ -49,6 +49,10 @@ based on previous knowledge of what tokens the current token has been proceeded 
   have a chance to reply to messages in. The bot still learns from all channels in realtime, but
   these channels it'll have an 80% of replying to any message
 
+- `Markov.BRAIN_FILE`: Path to file where the chain will be persisted. This file will automatically be created
+   if it doesn't exist already. The file itself is msgpack, so it's recommended to give it a `msgpack` extension.
+   By default it will be set to `$PWD/brain.msgpack`
+
 ## Adding Cogs
 
 To start, you can run `poetry run add_cog`.
