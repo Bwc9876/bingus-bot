@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 import random
-import json
 from typing import Optional
+from pathlib import Path
+from msgpack import packb, unpackb
 
 
 @dataclass
@@ -190,16 +191,27 @@ class MarkovChain:
         else:
             return self._chain(None, max_length=max_length)
 
-    def dump(self) -> str:
-        return json.dumps(
-            {
-                token_ser(e): {token_ser(k): v for k, v in w.to_tokens.items()}
-                for e, w in self.edges.items()
-            }
-        )
+    def save_to_file(self, path: Path):
+        if not path.parent.exists():
+            path.parent.mkdir(parents=True)
+        path.write_bytes(self.dumpb())
 
-    def load(source: str):
-        dat = json.loads(source)
+    def load_from_file(path: Path):
+        return MarkovChain.loadb(path.read_bytes())
+
+    def dumpb(self):
+        return packb(self.ser())
+
+    def loadb(dat):
+        return MarkovChain.deser(unpackb(dat))
+
+    def ser(self):
+        return {
+            token_ser(e): {token_ser(k): v for k, v in w.to_tokens.items()}
+            for e, w in self.edges.items()
+        }
+
+    def deser(dat):
         edges = {
             token_de(e): StateTransitions({token_de(k): v for k, v in w.items()})
             for e, w in dat.items()
