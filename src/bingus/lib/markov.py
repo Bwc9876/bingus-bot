@@ -3,6 +3,7 @@ import random
 from typing import Optional
 from pathlib import Path
 from msgpack import packb, unpackb
+from brotli import compress, decompress
 
 
 @dataclass
@@ -200,10 +201,10 @@ class MarkovChain:
         return MarkovChain.loadb(path.read_bytes())
 
     def dumpb(self):
-        return packb(self.ser())
+        return compress(packb(self.ser()))
 
     def loadb(dat):
-        return MarkovChain.deser(unpackb(dat))
+        return MarkovChain.deser(unpackb(decompress(dat)))
 
     def ser(self):
         return {

@@ -15,7 +15,7 @@ class Markov(commands.Cog):
         self.reply_channels = [
             int(x) for x in os.getenv("Markov.REPLY_CHANNELS", "0").split(",")
         ]
-        self.chain_file = Path(os.getenv("Markov.BRAIN_FILE", "brain.msgpack"))
+        self.chain_file = Path(os.getenv("Markov.BRAIN_FILE", "brain.msgpackz"))
         if self.chain_file.is_file():
             print(f"Attempting load from {self.chain_file}...")
             try:

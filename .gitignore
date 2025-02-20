@@ -5,4 +5,5 @@ dist/
 result
 __pycache__
 brain.msgpack
+brain.msgpackz
 *.env

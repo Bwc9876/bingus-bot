@@ -1,9 +1,9 @@
-{
-  pkgs,
-  lib,
-  outputs,
-  ...
-}: let
+{ pkgs
+, lib
+, outputs
+, ...
+}:
+let
   editableOverlay = outputs.lib.workspace.mkEditablePyprojectOverlay {
     root = "$REPO_ROOT";
   };
@@ -14,22 +14,22 @@
         nativeBuildInputs =
           old.nativeBuildInputs
           ++ final.resolveBuildSystem {
-            editables = [];
+            editables = [ ];
           };
       });
     })
   ]);
   virtualenv = editablePythonSet.mkVirtualEnv "bingus-dev-env" outputs.lib.workspace.deps.all;
 in
-  pkgs.mkShell {
-    packages = with pkgs; [uv ruff virtualenv python312Packages.hatchling alejandra];
-    env = {
-      UV_NO_SYNC = "1";
-      UV_PYTHON = "${virtualenv}/bin/python";
-      UV_PYTHON_DOWNLOADS = "never";
-    };
-    shellHook = ''
-      unset PYTHONPATH
-      export REPO_ROOT=$(git rev-parse --show-toplevel)
-    '';
-  }
+pkgs.mkShell {
+  packages = with pkgs; [ uv ruff virtualenv python312Packages.hatchling alejandra ];
+  env = {
+    UV_NO_SYNC = "1";
+    UV_PYTHON = "${virtualenv}/bin/python";
+    UV_PYTHON_DOWNLOADS = "never";
+  };
+  shellHook = ''
+    unset PYTHONPATH
+    export REPO_ROOT=$(git rev-parse --show-toplevel)
+  '';
+}
