@@ -2,7 +2,6 @@ import discord
 
 
 class NotOwnerError(discord.ApplicationCommandError):
-
     def __init__(self) -> None:
         super().__init__("You are not allowed to run this command")
 

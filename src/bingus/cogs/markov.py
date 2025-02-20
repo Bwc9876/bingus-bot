@@ -4,21 +4,35 @@ import io
 import discord
 from discord.ext import commands
 from discord.message import Message
+from pathlib import Path
 from ..lib.markov import MarkovChain
 from ..lib.permissions import require_owner
 
 
 class Markov(commands.Cog):
-
     def __init__(self, bot: discord.bot.Bot):
         self.bot = bot
         self.reply_channels = [
             int(x) for x in os.getenv("Markov.REPLY_CHANNELS", "0").split(",")
         ]
-        self.markov = MarkovChain({})
+        self.chain_file = Path(os.getenv("Markov.BRAIN_FILE", "brain.msgpack"))
+        if self.chain_file.is_file():
+            print(f"Attempting load from {self.chain_file}...")
+            try:
+                self.markov = MarkovChain.load_from_file(self.chain_file)
+                print("Load Complete")
+            except Exception as E:
+                print(f"Error while loading\n{E}")
+        else:
+            self.markov = MarkovChain({})
 
     async def update_words(self):
         amount = len(self.markov.edges.keys())
+        try:
+            self.markov.save_to_file(self.chain_file)
+        except Exception as E:
+            print(f"Error while saving\n{E}")
+
         await self.bot.change_presence(
             activity=discord.CustomActivity(name=f"I know {amount} words!")
         )
@@ -26,17 +40,18 @@ class Markov(commands.Cog):
     @require_owner
     @commands.slash_command()
     async def dump_chain(self, ctx: discord.ApplicationContext):
-        o = self.markov.dump()
-        fd = io.BytesIO(o.encode())
-        await ctx.respond(ephemeral=True, file=discord.File(fd, filename="brain.json"))
+        o = self.markov.dumpb()
+        fd = io.BytesIO(o)
+        await ctx.respond(
+            ephemeral=True, file=discord.File(fd, filename="brain.msgpack")
+        )
 
     @require_owner
     @commands.slash_command()
     async def load_chain(
         self, ctx: discord.ApplicationContext, raw: discord.Option(discord.Attachment)
     ):
-        j = (await raw.read()).decode("utf-8")
-        new = MarkovChain.load(j)
+        new = MarkovChain.loadb(await raw.read())
         self.markov.merge(new)
         await ctx.respond("Imported", ephemeral=True)
         await self.update_words()
@@ -44,11 +59,11 @@ class Markov(commands.Cog):
     @require_owner
     @commands.slash_command()
     async def scan_history(self, ctx: discord.ApplicationContext):
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
         async for msg in ctx.history(limit=None):
             if msg.author.id != self.bot.application_id:
                 self.markov.learn(msg.content)
-        await ctx.respond("> Bingus Learned!")
+        await ctx.respond("> Bingus Learned!", ephemeral=True)
         await self.update_words()
 
     @commands.slash_command()
@@ -80,8 +95,11 @@ class Markov(commands.Cog):
                 await ctx.respond(f"{head}:\n{msg}")
 
     @commands.Cog.listener()
-    async def on_message(self, msg: Message):
+    async def on_ready(self):
+        await self.update_words()
 
+    @commands.Cog.listener()
+    async def on_message(self, msg: Message):
         if msg.flags.ephemeral or msg.channel.type == discord.ChannelType.private:
             return
 
