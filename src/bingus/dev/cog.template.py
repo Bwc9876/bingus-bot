@@ -1,10 +1,9 @@
-import discord
+# import discord
 from discord.ext import commands
-from discord.message import Message
+# from discord.message import Message
 
 
 class __CName__(commands.Cog):
-
     # Setup any state for the cog here, this will
     # exist for the run of the program
     # If you need to change the parameters for __init__

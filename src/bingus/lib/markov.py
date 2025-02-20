@@ -20,7 +20,6 @@ class Word:
 
 @dataclass
 class End:
-
     def __str__(self):
         return "~END"
 
@@ -35,8 +34,8 @@ def token_ser(t: Token) -> str:
     match t:
         case Word(w):
             return f"W-{w}"
-        case End:
-            return f"E--"
+        case _:
+            return "E--"
 
 
 def token_de(s: str) -> Token:
@@ -153,7 +152,6 @@ class MarkovChain:
     def _chain_tokens(
         self, starting_token: Optional[Token] = None, max_length: int = 20
     ) -> list[Token]:
-
         tokens = []
 
         if starting_token is None:

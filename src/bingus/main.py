@@ -10,7 +10,6 @@ from .lib.permissions import NotOwnerError
 
 
 class BingusBot(Bot):
-
     def __init__(self, *args, **kwargs):
         self.bingus_owners = []
         super().__init__(*args, **kwargs)
@@ -38,7 +37,6 @@ class BingusBot(Bot):
 
 
 def main():
-
     load_dotenv(".env")
 
     print("Initializing Base Bot...")

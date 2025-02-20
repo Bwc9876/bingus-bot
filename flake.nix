@@ -1,36 +1,36 @@
 {
-  description = "The world's most clever kitty cat";
-
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-    poetry2nix.url = "github:nix-community/poetry2nix";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixpkgs-unstable";
+    flakelight.url = "github:nix-community/flakelight";
+    flakelight.inputs.nixpkgs.follows = "nixpkgs";
+
+    pyproject-nix = {
+      url = "github:pyproject-nix/pyproject.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    uv2nix = {
+      url = "github:pyproject-nix/uv2nix";
+      inputs.pyproject-nix.follows = "pyproject-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    pyproject-build-systems = {
+      url = "github:pyproject-nix/build-system-pkgs";
+      inputs.pyproject-nix.follows = "pyproject-nix";
+      inputs.uv2nix.follows = "uv2nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    poetry2nix,
-  }: let
-    forAllSystems = nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed;
-    pkgsFor = system:
-      (import nixpkgs) {
-        inherit system;
-        overlays = [
-          poetry2nix.overlays.default
-        ];
-      };
-    bingus = pkgs: pkgs.callPackage ./nix/bingus.nix {};
-  in {
-    packages = forAllSystems (system: rec {
-      default = bingus (pkgsFor system);
-    });
-    devShells = forAllSystems (system: let
-      pkgs = pkgsFor system;
-    in {
-      default = pkgs.mkShell {
-        packages = with pkgs; [poetry python312];
-        inputsFrom = [(bingus pkgs)];
+  outputs = inputs @ {flakelight, ...}:
+    flakelight ./. ({lib, ...}: {
+      inherit inputs;
+      systems = lib.systems.flakeExposed;
+      pname = "bingus";
+      formatters = {
+        "*.nix" = "alejandra .";
+        "*.py" = "ruff format";
       };
     });
-  };
 }

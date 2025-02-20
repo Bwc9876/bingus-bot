@@ -9,7 +9,6 @@ from ..lib.permissions import require_owner
 
 
 class Markov(commands.Cog):
-
     def __init__(self, bot: discord.bot.Bot):
         self.bot = bot
         self.reply_channels = [
@@ -81,7 +80,6 @@ class Markov(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, msg: Message):
-
         if msg.flags.ephemeral or msg.channel.type == discord.ChannelType.private:
             return
 
