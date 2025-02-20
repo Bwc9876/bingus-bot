@@ -43,7 +43,7 @@ class Markov(commands.Cog):
         o = self.markov.dumpb()
         fd = io.BytesIO(o)
         await ctx.respond(
-            ephemeral=True, file=discord.File(fd, filename="brain.msgpack")
+            ephemeral=True, file=discord.File(fd, filename="brain.msgpackz")
         )
 
     @require_owner
