@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Ben C", email = "bwc9876@gmail.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "brotli>=1.1.0",
     "msgpack>=1.1.0",

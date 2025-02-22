@@ -50,7 +50,7 @@ based on previous knowledge of what tokens the current token has been proceeded 
   these channels it'll have an 80% of replying to any message
 
 - `Markov.BRAIN_FILE`: Path to file where the chain will be persisted. This file will automatically be created
-  if it doesn't exist already. The file itself is msgpack compressed with brotli,
+  if it doesn't exist already. The file itself is msgpack compressed with brotli, 
   so it's recommended to give it a `msgpackz` extension. By default it will be set to `$PWD/brain.msgpackz`
 
 ## Adding Cogs
