@@ -22,7 +22,7 @@ let
   virtualenv = editablePythonSet.mkVirtualEnv "bingus-dev-env" outputs.lib.workspace.deps.all;
 in
 pkgs.mkShell {
-  packages = with pkgs; [ uv ruff virtualenv python312Packages.hatchling alejandra ];
+  packages = with pkgs; [ uv ruff virtualenv python313Packages.hatchling alejandra ];
   env = {
     UV_NO_SYNC = "1";
     UV_PYTHON = "${virtualenv}/bin/python";

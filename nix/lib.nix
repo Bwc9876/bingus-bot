@@ -17,7 +17,7 @@ let
   overlay = workspace.mkPyprojectOverlay {
     sourcePreference = "wheel";
   };
-  selectPy = pkgs: pkgs.python312;
+  selectPy = pkgs: pkgs.python313;
 
   # hammerOverride = pkgs: pkgs.lib.composeExtensions (inputs.uv2nix_hammer_overrides.overrides pkgs) overlay;
 
