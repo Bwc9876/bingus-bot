@@ -2,6 +2,8 @@ import random
 import os
 import io
 import discord
+import pytesseract
+import PIL
 from discord.ext import commands
 from discord.message import Message
 from pathlib import Path
@@ -93,6 +95,23 @@ class Markov(commands.Cog):
                 await ctx.respond(head, file=discord.File(fd, filename="weights.txt"))
             else:
                 await ctx.respond(f"{head}:\n{msg}")
+
+    @require_owner
+    @commands.slash_command()
+    async def ocr(
+        self, ctx: discord.ApplicationContext, file: discord.Option(discord.Attachment)
+    ):
+        raw = await file.read()
+        try:
+            image = PIL.Image.open(io.BytesIO(raw))
+            text = pytesseract.image_to_string(image)
+            self.markov.learn(text)
+            await ctx.respond("> Bingus learned something from image!", ephemeral=True)
+            await self.update_words()
+        except PIL.UnidentifiedImageError:
+            await ctx.respond(
+                "> Bingus only understands image files!", ephemeral=True
+            )
 
     @require_owner
     @commands.slash_command()

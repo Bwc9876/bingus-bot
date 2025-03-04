@@ -12,6 +12,8 @@ dependencies = [
     "msgpack>=1.1.0",
     "py-cord>=2.6.1",
     "python-dotenv>=1.0.1",
+    "pytesseract>=0.3.13",
+    "pillow>=11.1.0"
 ]
 
 [project.scripts]

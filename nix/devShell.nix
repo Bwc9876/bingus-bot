@@ -1,28 +1,28 @@
-{ pkgs
-, lib
-, outputs
-, ...
-}:
+{ pkgs, lib, outputs, ... }:
 let
-  editableOverlay = outputs.lib.workspace.mkEditablePyprojectOverlay {
-    root = "$REPO_ROOT";
-  };
-  editablePythonSet = (outputs.lib.pythonSetForPkgs pkgs).overrideScope (lib.composeManyExtensions [
-    editableOverlay
-    (final: prev: {
-      bingus = prev.bingus.overrideAttrs (old: {
-        nativeBuildInputs =
-          old.nativeBuildInputs
-          ++ final.resolveBuildSystem {
-            editables = [ ];
-          };
-      });
-    })
-  ]);
-  virtualenv = editablePythonSet.mkVirtualEnv "bingus-dev-env" outputs.lib.workspace.deps.all;
-in
-pkgs.mkShell {
-  packages = with pkgs; [ uv ruff virtualenv python312Packages.hatchling alejandra ];
+  editableOverlay =
+    outputs.lib.workspace.mkEditablePyprojectOverlay { root = "$REPO_ROOT"; };
+  editablePythonSet = (outputs.lib.pythonSetForPkgs pkgs).overrideScope
+    (lib.composeManyExtensions [
+      editableOverlay
+      (final: prev: {
+        bingus = prev.bingus.overrideAttrs (old: {
+          nativeBuildInputs = old.nativeBuildInputs
+            ++ final.resolveBuildSystem { editables = [ ]; };
+        });
+      })
+    ]);
+  virtualenv = editablePythonSet.mkVirtualEnv "bingus-dev-env"
+    outputs.lib.workspace.deps.all;
+in pkgs.mkShell {
+  packages = with pkgs; [
+    uv
+    ruff
+    virtualenv
+    python312Packages.hatchling
+    alejandra
+    tesseract
+  ];
   env = {
     UV_NO_SYNC = "1";
     UV_PYTHON = "${virtualenv}/bin/python";
