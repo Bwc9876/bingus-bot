@@ -94,6 +94,22 @@ class Markov(commands.Cog):
             else:
                 await ctx.respond(f"{head}:\n{msg}")
 
+    @require_owner
+    @commands.slash_command()
+    async def study(
+        self, ctx: discord.ApplicationContext, file: discord.Option(discord.Attachment)
+    ):
+        raw = await file.read()
+        try:
+            text = raw.decode()
+            self.markov.learn(text)
+            await ctx.respond("> Bingus learned from file!", ephemeral=True)
+            await self.update_words()
+        except UnicodeDecodeError:
+            await ctx.respond(
+                "> Bingus only understands UTF-8 text files!", ephemeral=True
+            )
+
     @commands.Cog.listener()
     async def on_ready(self):
         await self.update_words()
