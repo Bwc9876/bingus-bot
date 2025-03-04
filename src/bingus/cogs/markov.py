@@ -109,9 +109,7 @@ class Markov(commands.Cog):
             await ctx.respond("> Bingus learned something from image!", ephemeral=True)
             await self.update_words()
         except PIL.UnidentifiedImageError:
-            await ctx.respond(
-                "> Bingus only understands image files!", ephemeral=True
-            )
+            await ctx.respond("> Bingus only understands image files!", ephemeral=True)
 
     @require_owner
     @commands.slash_command()
@@ -131,11 +129,10 @@ class Markov(commands.Cog):
 
     @require_owner
     @commands.slash_command()
-    async def forget(
-        self, ctx: discord.ApplicationContext):
-            self.markov.forget()
-            await ctx.respond("> Bingus forgot everything!", ephemeral=True)
-            await self.update_words()
+    async def forget(self, ctx: discord.ApplicationContext):
+        self.markov.forget()
+        await ctx.respond("> Bingus forgot everything!", ephemeral=True)
+        await self.update_words()
 
     @commands.Cog.listener()
     async def on_ready(self):

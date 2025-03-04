@@ -131,7 +131,7 @@ class MarkovChain:
         self._learn_from_tokens(tokens)
 
     def forget(self):
-        self.edges = {} 
+        self.edges = {}
 
     def _pick_next(self, current_token: Token, allow_end: bool) -> Token:
         transitions = self.edges.get(current_token)
