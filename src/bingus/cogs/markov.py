@@ -2,6 +2,8 @@ import random
 import os
 import io
 import discord
+import pytesseract
+import PIL
 from discord.ext import commands
 from discord.message import Message
 from pathlib import Path
@@ -96,6 +98,21 @@ class Markov(commands.Cog):
 
     @require_owner
     @commands.slash_command()
+    async def ocr(
+        self, ctx: discord.ApplicationContext, file: discord.Option(discord.Attachment)
+    ):
+        raw = await file.read()
+        try:
+            image = PIL.Image.open(io.BytesIO(raw))
+            text = pytesseract.image_to_string(image)
+            self.markov.learn(text)
+            await ctx.respond("> Bingus learned something from image!", ephemeral=True)
+            await self.update_words()
+        except PIL.UnidentifiedImageError:
+            await ctx.respond("> Bingus only understands image files!", ephemeral=True)
+
+    @require_owner
+    @commands.slash_command()
     async def study(
         self, ctx: discord.ApplicationContext, file: discord.Option(discord.Attachment)
     ):
@@ -112,11 +129,10 @@ class Markov(commands.Cog):
 
     @require_owner
     @commands.slash_command()
-    async def forget(
-        self, ctx: discord.ApplicationContext):
-            self.markov.forget()
-            await ctx.respond("> Bingus forgot everything!", ephemeral=True)
-            await self.update_words()
+    async def forget(self, ctx: discord.ApplicationContext):
+        self.markov.forget()
+        await ctx.respond("> Bingus forgot everything!", ephemeral=True)
+        await self.update_words()
 
     @commands.Cog.listener()
     async def on_ready(self):
