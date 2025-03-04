@@ -110,6 +110,14 @@ class Markov(commands.Cog):
                 "> Bingus only understands UTF-8 text files!", ephemeral=True
             )
 
+    @require_owner
+    @commands.slash_command()
+    async def forget(
+        self, ctx: discord.ApplicationContext):
+            self.markov.forget()
+            await ctx.respond("> Bingus forgot everything!", ephemeral=True)
+            await self.update_words()
+
     @commands.Cog.listener()
     async def on_ready(self):
         await self.update_words()
