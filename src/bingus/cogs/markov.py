@@ -4,6 +4,7 @@ import io
 import discord
 import pytesseract
 import PIL
+import pypdf
 from discord.ext import commands
 from discord.message import Message
 from pathlib import Path
@@ -95,6 +96,28 @@ class Markov(commands.Cog):
                 await ctx.respond(head, file=discord.File(fd, filename="weights.txt"))
             else:
                 await ctx.respond(f"{head}:\n{msg}")
+
+    @require_owner
+    @commands.slash_command()
+    async def pdf(
+        self, ctx: discord.ApplicationContext, file: discord.Option(discord.Attachment)
+    ):
+        await ctx.defer(ephemeral=True)
+        raw = await file.read()
+        try:
+            pdf = pypdf.PdfReader(io.BytesIO(raw))
+            # i = 0
+            for page in pdf.pages:
+                # i += 1
+                # printf("Bingus learned a page! {i}/{pdf.get_num_pages()}")
+                text = page.extract_text()
+                self.markov.learn(text)
+                await self.update_words()
+            await ctx.respond(
+                "> Bingus learned something from the pdf!", ephemeral=True
+            )
+        except pypdf.errors.PdfReadError:
+            await ctx.respond("> Bingus only understands pdf files!", ephemeral=True)
 
     @require_owner
     @commands.slash_command()
