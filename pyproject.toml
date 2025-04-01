@@ -11,10 +11,10 @@ dependencies = [
     "brotli>=1.1.0",
     "msgpack>=1.1.0",
     "py-cord>=2.6.1",
-    "python-dotenv>=1.0.1",
+    "python-dotenv>=1.1.0",
     "pytesseract>=0.3.13",
-    "pillow>=11.1.0",
-    "pypdf>=5.3.1"
+    "pillow>=11.2.0",
+    "pypdf>=5.4.0"
 ]
 
 [project.scripts]
