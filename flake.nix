@@ -26,7 +26,7 @@
   outputs = inputs @ {flakelight, ...}:
     flakelight ./. ({
       lib,
-      inputs',
+      inputs,
       ...
     }: {
       inherit inputs;
@@ -81,7 +81,7 @@
             environment."Markov.BRAIN_FILE" = cfg.brainFile;
             serviceConfig.execStart = ''
               mkdir -p $(dirname ${cfg.brainFile})
-              TOKEN=$(cat ${cfg.tokenFile}) ${inputs'.packages.bingus-env}/bin/bingus
+              TOKEN=$(cat ${cfg.tokenFile}) ${inputs.self.packages.${pkgs.system}.bingus-env}/bin/bingus
             '';
           };
         };
