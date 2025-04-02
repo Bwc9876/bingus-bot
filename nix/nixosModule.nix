@@ -37,7 +37,8 @@ in {
     systemd.services.bingus = let
       replyChannelsStr = lib.strings.concatStrings (lib.strings.intersperse "/" (builtins.map builtins.toString cfg.replyChannels));
     in {
-      wanted-by = ["multi-user.target"];
+      wantedBy = ["multi-user.target"];
+      after = ["network.target"];
       environment."Markov.REPLY_CHANNELS" = replyChannelsStr;
       environment."Markov.BRAIN_FILE" = cfg.brainFile;
       serviceConfig.execStart = ''
