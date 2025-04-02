@@ -16,9 +16,9 @@ class Markov(commands.Cog):
     def __init__(self, bot: discord.bot.Bot):
         self.bot = bot
         self.reply_channels = [
-            int(x) for x in os.getenv("Markov.REPLY_CHANNELS", "0").split(",")
+            int(x) for x in os.getenv("REPLY_CHANNELS", "0").split(",")
         ]
-        self.chain_file = Path(os.getenv("Markov.BRAIN_FILE", "brain.msgpackz"))
+        self.chain_file = Path(os.getenv("BRAIN_FILE", "brain.msgpackz"))
         if self.chain_file.is_file():
             print(f"Attempting load from {self.chain_file}...")
             try:

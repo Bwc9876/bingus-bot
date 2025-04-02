@@ -23,8 +23,8 @@
     };
   };
 
-  outputs = inputs @ { flakelight, ... }:
-    flakelight ./. ({ lib, ... }: {
+  outputs = inputs @ {flakelight, ...}:
+    flakelight ./. ({lib, ...}: {
       inherit inputs;
       systems = lib.systems.flakeExposed;
       pname = "bingus";
