@@ -1,9 +1,8 @@
 {
   pkgs,
   lib,
-  config,
   ...
-}: let
+}: {config}:  let
   cfg = config.services.bingus-bot;
 in {
   options.services.bingus-bot = {
