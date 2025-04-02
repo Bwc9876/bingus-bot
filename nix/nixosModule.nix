@@ -41,6 +41,7 @@ in {
       environment."Markov.REPLY_CHANNELS" = replyChannelsStr;
       environment."Markov.BRAIN_FILE" = cfg.brainFile;
       serviceConfig.execStart = ''
+        mkdir -p $(dirname ${cfg.brainFile})
         TOKEN=$(cat ${cfg.tokenFile}) ${pkgs.bingus-env}/bin/bingus
       '';
     };
