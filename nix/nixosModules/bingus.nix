@@ -1,6 +1,5 @@
 {
   pkgs,
-  outputs',
   lib,
   config,
   ...
@@ -44,7 +43,7 @@ in {
       environment."Markov.BRAIN_FILE" = cfg.brainFile;
       serviceConfig.execStart = ''
         mkdir -p $(dirname ${cfg.brainFile})
-        TOKEN=$(cat ${cfg.tokenFile}) ${outputs'.packages.bingus-env}/bin/bingus
+        TOKEN=$(cat ${cfg.tokenFile}) ${pkgs.bingus-env}/bin/bingus
       '';
     };
   };
