@@ -4,7 +4,7 @@
   config,
   ...
 }: let
-  cfg = config.bingus-bot;
+  cfg = config.services.bingus-bot;
 in {
   options.services.bingus-bot = {
     enable = lib.mkOption {
