@@ -6,7 +6,7 @@
 }: let
   cfg = config.bingus-bot;
 in {
-  options.bingus-bot = {
+  options.services.bingus-bot = {
     enable = lib.mkOption {
       type = lib.types.bool;
       default = false;
