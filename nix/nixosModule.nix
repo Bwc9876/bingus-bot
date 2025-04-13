@@ -38,7 +38,7 @@ in {
 
       script = ''
         export TOKEN=$(cat "$CREDENTIALS_DIRECTORY/BINGUS_BOT_TOKEN")
-        export BRAIN_FILE=$XDG_STATE_HOME/brain.msgpackz
+        export BRAIN_FILE=$STATE_DIRECTORY/brain.msgpackz
         ${pkgs.bingus}/bin/bingus
       '';
 
