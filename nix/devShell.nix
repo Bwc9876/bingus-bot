@@ -19,7 +19,7 @@ in pkgs.mkShell {
     uv
     ruff
     virtualenv
-    python312Packages.hatchling
+    python313Packages.hatchling
     alejandra
     tesseract
   ];

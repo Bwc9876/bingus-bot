@@ -1,6 +1,7 @@
-{ inputs
-, lib
-, ...
+{
+  inputs,
+  lib,
+  ...
 }:
 let
   src = lib.fileset.toSource {
@@ -13,20 +14,21 @@ let
     ];
   };
 
-  workspace = inputs.uv2nix.lib.workspace.loadWorkspace { workspaceRoot = src.outPath; };
+  srcSilly = /. + builtins.toString (builtins.unsafeDiscardStringContext src);
+  workspace = inputs.uv2nix.lib.workspace.loadWorkspace { workspaceRoot = srcSilly; };
   overlay = workspace.mkPyprojectOverlay {
     sourcePreference = "wheel";
   };
-  selectPy = pkgs: pkgs.python312;
+  selectPy = pkgs: pkgs.python313;
 
   # hammerOverride = pkgs: pkgs.lib.composeExtensions (inputs.uv2nix_hammer_overrides.overrides pkgs) overlay;
 
-  pyOverride = pkgs:
-    pkgs.lib.composeExtensions overlay (_final: prev: { });
+  pyOverride = pkgs: pkgs.lib.composeExtensions overlay (_final: prev: { });
 in
 {
   inherit workspace;
-  pythonSetForPkgs = pkgs:
+  pythonSetForPkgs =
+    pkgs:
     (pkgs.callPackage inputs.pyproject-nix.build.packages {
       python = selectPy pkgs;
     }).overrideScope

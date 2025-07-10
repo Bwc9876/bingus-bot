@@ -1,4 +1,5 @@
-{ pkgs, ... }: {
+{ pkgs, ... }:
+{
   type = "app";
-  program = "${pkgs.bingus-env}/bin/bingus";
+  program = "${pkgs.bingus}/bin/bingus";
 }

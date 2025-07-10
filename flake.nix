@@ -24,8 +24,9 @@
   };
 
   outputs = inputs @ {flakelight, ...}:
-    flakelight ./. ({lib, ...}: {
+    flakelight ./. ({lib, outputs, ...}: {
       inherit inputs;
+      package = {system, ...}: outputs.packages.${system}.bingus;
       systems = lib.systems.flakeExposed;
       pname = "bingus";
       formatters = {
