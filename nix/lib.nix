@@ -1,21 +1,9 @@
 {
   inputs,
-  lib,
   ...
 }:
 let
-  src = lib.fileset.toSource {
-    root = ../.;
-    fileset = lib.fileset.unions [
-      ../uv.lock
-      ../pyproject.toml
-      ../src
-      ../README.md
-    ];
-  };
-
-  srcSilly = /. + builtins.toString (builtins.unsafeDiscardStringContext src);
-  workspace = inputs.uv2nix.lib.workspace.loadWorkspace { workspaceRoot = srcSilly; };
+  workspace = inputs.uv2nix.lib.workspace.loadWorkspace { workspaceRoot = ../.; };
   overlay = workspace.mkPyprojectOverlay {
     sourcePreference = "wheel";
   };
