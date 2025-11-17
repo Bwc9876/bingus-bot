@@ -6,14 +6,14 @@ readme = "README.md"
 authors = [{ name = "Ben C", email = "bwc9876@gmail.com" }]
 requires-python = ">=3.13"
 dependencies = [
-    "brotli>=1.1.0",
-    "msgpack>=1.1.1",
+    "brotli>=1.2.0",
+    "msgpack>=1.1.2",
     "py-cord>=2.6.1",
-    "python-dotenv>=1.1.1",
+    "python-dotenv>=1.2.1",
     "pytesseract>=0.3.13",
-    "pillow>=11.3.0",
-    "pypdf>=5.7.0",
-    "audioop-lts>=0.2.1",
+    "pillow>=12.0.0",
+    "pypdf>=6.3.0",
+    "audioop-lts>=0.2.2",
 ]
 
 [project.scripts]
