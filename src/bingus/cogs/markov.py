@@ -163,7 +163,7 @@ class Markov(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, msg: Message):
-        if msg.flags.ephemeral or msg.channel.type == discord.ChannelType.private:
+        if msg.is_system() or msg.flags.ephemeral or msg.channel.type == discord.ChannelType.private:
             return
 
         if msg.author.id != self.bot.application_id:
