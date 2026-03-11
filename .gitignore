@@ -7,6 +7,7 @@ __pycache__
 brain.msgpack
 brain.msgpackz
 *.env
+dev.token
 
 
 # Added by cargo
