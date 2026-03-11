@@ -7,3 +7,8 @@ __pycache__
 brain.msgpack
 brain.msgpackz
 *.env
+
+
+# Added by cargo
+
+/target
