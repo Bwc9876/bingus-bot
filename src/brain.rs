@@ -1,0 +1,270 @@
+use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
+
+
+/// Some = Word, None = End Message
+pub type Token = Option<String>;
+pub type Weight = u16;
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct Edges(HashMap<Token, Weight>, u64);
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct Brain(HashMap<Token, Edges>);
+
+pub fn format_token(tok: &Token) -> String {
+    if let Some(w) = tok {
+        w.clone()
+    } else {
+        "~END".to_string()
+    }
+}
+
+impl Edges {
+    fn increment_token(&mut self, tok: &Token) {
+        if let Some(w) = self.0.get_mut(tok) {
+            *w = w.saturating_add(1);
+        } else {
+            self.0.insert(tok.clone(), 1);
+        }
+        self.1 = self.1.saturating_add(1);
+    }
+
+    fn merge_from(&mut self, other: Self) {
+        self.0.reserve(other.0.len());
+        for (k, v) in other.0.into_iter() {
+            if let Some(w) = self.0.get_mut(&k) {
+                *w = w.saturating_add(v);
+            } else {
+                self.0.insert(k, v);
+            }
+            self.1 = self.1.saturating_add(v as u64);
+        }
+    }
+
+    fn sample(&self, rand: &mut fastrand::Rng) -> Option<Token> {
+        let mut dist_left = rand.f64() * self.1 as f64;
+        for (tok, weight) in self.0.iter() {
+            dist_left -= *weight as f64;
+            if dist_left < 0.0 {
+                return Some(tok.clone());
+            }
+        }
+        None
+    }
+
+    pub fn iter_weights(&self) -> impl Iterator<Item = (&Token, Weight, f64)> {
+        self.0
+            .iter()
+            .map(|(k, v)| (k, *v, (*v as f64) / (self.1 as f64)))
+    }
+}
+
+impl Brain {
+    fn normalize_token(word: &str) -> Token {
+        let w = if word.starts_with("http://") || word.starts_with("https://") {
+            word.to_string()
+        } else {
+            word.to_ascii_lowercase()
+        };
+        Some(w)
+    }
+
+    fn parse(msg: &str) -> impl Iterator<Item = Token> {
+        msg.split_ascii_whitespace()
+            .filter_map(|w| {
+                // Filter out pings, they can get annoying
+                if w.starts_with("<@") && w.ends_with(">") {
+                    None
+                } else {
+                    Some(Self::normalize_token(w))
+                }
+            })
+            .chain(std::iter::once(None))
+    }
+
+    fn should_reply(rand: &mut fastrand::Rng, is_self: bool) -> bool {
+        let chance = if is_self { 80 } else { 45 };
+        let roll = rand.u8(0..=100);
+
+        cfg!(test) || roll <= chance
+    }
+
+    fn extract_final_token(msg: &str) -> Option<Token> {
+        msg.split_ascii_whitespace()
+            .last()
+            .map(Self::normalize_token)
+    }
+
+    fn random_token(&self, rand: &mut fastrand::Rng) -> Option<Token> {
+        let len = self.0.len();
+        if len == 0 {
+            None
+        } else {
+            let i = rand.usize(..len);
+            self.0.keys().nth(i).cloned()
+        }
+    }
+
+    pub fn ingest(&mut self, msg: &str) {
+        // This is a silly way to do windows rust ppl :sob:
+        let _ = Self::parse(msg)
+            .map_windows(|[from, to]| {
+                eprintln!("{from:?} {to:?}");
+                if let Some(edge) = self.0.get_mut(from) {
+                    edge.increment_token(to);
+                } else {
+                    let new = Edges(HashMap::from_iter([(to.clone(), 1)]), 1);
+                    self.0.insert(from.clone(), new);
+                }
+            })
+            .collect::<Vec<_>>();
+    }
+
+    pub fn merge_from(&mut self, other: Self) {
+        for (k, v) in other.0.into_iter() {
+            if let Some(edges) = self.0.get_mut(&k) {
+                edges.merge_from(v);
+            } else {
+                self.0.insert(k, v);
+            }
+        }
+    }
+
+    pub fn respond(&self, msg: &str, is_self: bool) -> Option<String> {
+        const MAX_TOKENS: usize = 20;
+
+        let mut rng = fastrand::Rng::new();
+
+        // Roll if we should reply
+        if !Self::should_reply(&mut rng, is_self) {
+            return None;
+        }
+
+        // Get our final token, or a random one if the message has nothing, or don't reply at all
+        // if we have no tokens at all.
+        let mut current_token =
+            Self::extract_final_token(msg).or_else(|| self.random_token(&mut rng))?;
+
+        let mut chain = Vec::with_capacity(MAX_TOKENS);
+
+        while let Some(tok) = current_token
+            && chain.len() <= MAX_TOKENS
+        {
+            if let Some(edges) = self.0.get(&Some(tok)) {
+                let next = edges.sample(&mut rng).flatten();
+                if let Some(ref s) = next {
+                    chain.push(s.clone());
+                }
+                current_token = next;
+            } else {
+                current_token = None;
+            }
+        }
+
+        Some(chain.join(" "))
+    }
+
+    pub fn get_weights(&self, tok: &str) -> Option<&Edges> {
+        self.0.get(&Self::normalize_token(tok))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::default::Default;
+
+    #[test]
+    fn ingest_parse() {
+        let tokens = Brain::parse("Hello world").collect::<Vec<_>>();
+        assert_eq!(
+            tokens,
+            vec![Some("hello".to_string()), Some("world".to_string()), None]
+        );
+    }
+
+    #[test]
+    fn ingest_url() {
+        let tokens = Brain::parse("https://example.com/CAPS-PATH").collect::<Vec<_>>();
+        assert_eq!(
+            tokens,
+            vec![Some("https://example.com/CAPS-PATH".to_string()), None]
+        );
+    }
+
+    #[test]
+    fn ingest_ping() {
+        let tokens = Brain::parse("hi <@1234567>").collect::<Vec<_>>();
+        assert_eq!(tokens, vec![Some("hi".to_string()), None]);
+    }
+
+    #[test]
+    fn basic_chain() {
+        let mut brain = Brain::default();
+        brain.ingest("hello world");
+        let hello_edges = brain
+            .0
+            .get(&Some("hello".to_string()))
+            .expect("Hello edges not created");
+        assert_eq!(
+            hello_edges.0,
+            HashMap::from_iter([(Some("world".to_string()), 1)])
+        );
+        let reply = brain.respond("hello", false);
+        assert_eq!(reply, Some("world".to_string()));
+    }
+
+    #[test]
+    fn long_chain() {
+        const LETTERS: &str = "abcdefghijklmnopqrstuvwxyz";
+        let msg = LETTERS
+            .chars()
+            .map(|c| c.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+        let mut brain = Brain::default();
+        brain.ingest(&msg);
+        let reply = brain.respond("a", false);
+        let expected = LETTERS
+            .chars()
+            .skip(1)
+            .take(21)
+            .map(|c| c.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+        assert_eq!(reply, Some(expected));
+    }
+
+    #[test]
+    fn merge_brain() {
+        let mut brain1 = Brain::default();
+        let mut brain2 = Brain::default();
+
+        brain1.ingest("hello world");
+        brain2.ingest("hello world");
+        brain2.ingest("hello world");
+        brain2.ingest("other word");
+
+        brain1.merge_from(brain2);
+
+        let hello_edges = brain1
+            .0
+            .get(&Some("hello".to_string()))
+            .expect("Hello edges not created");
+        assert_eq!(
+            hello_edges.0,
+            HashMap::from_iter([(Some("world".to_string()), 3)])
+        );
+
+        let new_edges = brain1
+            .0
+            .get(&Some("other".to_string()))
+            .expect("New edges not created");
+        assert_eq!(
+            new_edges.0,
+            HashMap::from_iter([(Some("word".to_string()), 1)])
+        );
+    }
+}
