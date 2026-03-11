@@ -32,6 +32,7 @@
         treefmtConfig = {pkgs, ...}: {
           programs = {
             alejandra.enable = true;
+            taplo.enable = true;
             rustfmt = {
               enable = true;
               package = (selectToolchain pkgs).rustfmt;
