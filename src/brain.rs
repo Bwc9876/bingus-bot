@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-
 /// Some = Word, None = End Message
 pub type Token = Option<String>;
 pub type Weight = u16;

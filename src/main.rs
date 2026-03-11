@@ -1,4 +1,5 @@
 #![feature(iter_map_windows)]
+#![allow(unused)]
 
 mod brain;
 
