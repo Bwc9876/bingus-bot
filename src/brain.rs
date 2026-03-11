@@ -1,6 +1,10 @@
+#![allow(unused)]
+
 use std::collections::HashMap;
 
+use log::debug;
 use serde::{Deserialize, Serialize};
+use tokio::sync::oneshot;
 
 /// Some = Word, None = End Message
 pub type Token = Option<String>;
@@ -11,6 +15,9 @@ pub struct Edges(HashMap<Token, Weight>, u64);
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Brain(HashMap<Token, Edges>);
+
+pub type TypingSender = oneshot::Sender<bool>;
+pub type TypingReceiver = oneshot::Receiver<bool>;
 
 pub fn format_token(tok: &Token) -> String {
     if let Some(w) = tok {
@@ -60,6 +67,8 @@ impl Edges {
     }
 }
 
+const FORCE_REPLIES: bool = cfg!(test) || (option_env!("BINGUS_FORCE_REPLY").is_some());
+
 impl Brain {
     fn normalize_token(word: &str) -> Token {
         let w = if word.starts_with("http://") || word.starts_with("https://") {
@@ -84,10 +93,10 @@ impl Brain {
     }
 
     fn should_reply(rand: &mut fastrand::Rng, is_self: bool) -> bool {
-        let chance = if is_self { 80 } else { 45 };
+        let chance = if is_self { 45 } else { 80 };
         let roll = rand.u8(0..=100);
 
-        cfg!(test) || roll <= chance
+        (FORCE_REPLIES && !is_self) || roll <= chance
     }
 
     fn extract_final_token(msg: &str) -> Option<Token> {
@@ -106,19 +115,22 @@ impl Brain {
         }
     }
 
-    pub fn ingest(&mut self, msg: &str) {
+    pub fn ingest(&mut self, msg: &str) -> bool {
+        let mut learned_new_word = false;
         // This is a silly way to do windows rust ppl :sob:
         let _ = Self::parse(msg)
             .map_windows(|[from, to]| {
-                eprintln!("{from:?} {to:?}");
                 if let Some(edge) = self.0.get_mut(from) {
                     edge.increment_token(to);
                 } else {
                     let new = Edges(HashMap::from_iter([(to.clone(), 1)]), 1);
                     self.0.insert(from.clone(), new);
+                    learned_new_word = true;
                 }
             })
             .collect::<Vec<_>>();
+
+        learned_new_word
     }
 
     pub fn merge_from(&mut self, other: Self) {
@@ -131,13 +143,19 @@ impl Brain {
         }
     }
 
-    pub fn respond(&self, msg: &str, is_self: bool) -> Option<String> {
+    pub fn respond(
+        &self,
+        msg: &str,
+        is_self: bool,
+        mut typing_oneshot: Option<TypingSender>,
+    ) -> Option<String> {
         const MAX_TOKENS: usize = 20;
 
         let mut rng = fastrand::Rng::new();
 
         // Roll if we should reply
         if !Self::should_reply(&mut rng, is_self) {
+            debug!("Failed roll");
             return None;
         }
 
@@ -147,6 +165,7 @@ impl Brain {
             Self::extract_final_token(msg).or_else(|| self.random_token(&mut rng))?;
 
         let mut chain = Vec::with_capacity(MAX_TOKENS);
+        let mut has_triggered_typing = false;
 
         while let Some(tok) = current_token
             && chain.len() <= MAX_TOKENS
@@ -155,6 +174,9 @@ impl Brain {
                 let next = edges.sample(&mut rng).flatten();
                 if let Some(ref s) = next {
                     chain.push(s.clone());
+                    if !has_triggered_typing && let Some(typ) = typing_oneshot.take() {
+                        typ.send(true).ok();
+                    }
                 }
                 current_token = next;
             } else {
@@ -162,7 +184,15 @@ impl Brain {
             }
         }
 
+        if let Some(typ) = typing_oneshot.take() {
+            typ.send(false).ok();
+        }
+
         Some(chain.join(" "))
+    }
+
+    pub fn word_count(&self) -> usize {
+        self.0.len()
     }
 
     pub fn get_weights(&self, tok: &str) -> Option<&Edges> {
@@ -211,7 +241,7 @@ mod tests {
             hello_edges.0,
             HashMap::from_iter([(Some("world".to_string()), 1)])
         );
-        let reply = brain.respond("hello", false);
+        let reply = brain.respond("hello", false, None);
         assert_eq!(reply, Some("world".to_string()));
     }
 
@@ -225,7 +255,7 @@ mod tests {
             .join(" ");
         let mut brain = Brain::default();
         brain.ingest(&msg);
-        let reply = brain.respond("a", false);
+        let reply = brain.respond("a", false, None);
         let expected = LETTERS
             .chars()
             .skip(1)
