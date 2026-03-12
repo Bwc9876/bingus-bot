@@ -35,8 +35,8 @@ async fn get_output(token: &str, brain: &BrainHandle) -> Option<String> {
 
 impl WeightsCommand {
     pub async fn handle(inter: Interaction, data: CommandData, ctx: Arc<BotContext>) -> Result {
-        let WeightsCommand { token } = WeightsCommand::from_interaction(data.into())
-            .context("Failed to parse command data")?;
+        let Self { token } =
+            Self::from_interaction(data.into()).context("Failed to parse command data")?;
 
         let client = ctx.http.interaction(ctx.app_id);
 

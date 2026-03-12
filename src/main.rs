@@ -207,7 +207,7 @@ async fn main() -> Result {
                         if let Err(why) = save_brain(ctx.clone()).await {
                             error!("Failed to save brain file:\n{why:?}");
                         }
-                        ctx.pending_save.store(true, Ordering::Relaxed);
+                        ctx.pending_save.store(false, Ordering::Relaxed);
                    });
                 }
             },

@@ -212,6 +212,49 @@ impl Brain {
     pub fn get_weights(&self, tok: &str) -> Option<&Edges> {
         self.0.get(&Self::normalize_token(tok))
     }
+
+    fn legacy_token_format(tok: &Token) -> String {
+        tok.as_ref()
+            .map(|s| format!("W-{s}"))
+            .unwrap_or_else(|| String::from("E--"))
+    }
+
+    pub fn as_legacy_hashmap(&self) -> HashMap<String, HashMap<String, Weight>> {
+        self.0
+            .iter()
+            .map(|(k, v)| {
+                let map =
+                    v.0.iter()
+                        .map(|(t, w)| (Self::legacy_token_format(t), *w))
+                        .collect();
+                (Self::legacy_token_format(k), map)
+            })
+            .collect()
+    }
+
+    fn read_legacy_token(s: String) -> Token {
+        match s.as_str() {
+            "E--" => None,
+            word => Some(word.strip_prefix("W-").unwrap_or(word).to_string()),
+        }
+    }
+
+    pub fn from_legacy_hashmap(map: HashMap<String, HashMap<String, Weight>>) -> Self {
+        Self(
+            map.into_iter()
+                .map(|(k, v)| {
+                    let sum = v.values().map(|w| *w as u64).sum::<u64>() as u64;
+                    let edges = Edges(
+                        v.into_iter()
+                            .map(|(t, w)| (Self::read_legacy_token(t), w))
+                            .collect(),
+                        sum,
+                    );
+                    (Self::read_legacy_token(k), edges)
+                })
+                .collect(),
+        )
+    }
 }
 
 #[cfg(test)]
