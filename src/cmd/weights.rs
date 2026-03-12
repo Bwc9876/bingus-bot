@@ -16,7 +16,7 @@ pub struct WeightsCommand {
 }
 
 async fn get_output(token: &str, brain: &BrainHandle) -> Option<String> {
-    let brain = brain.lock().await;
+    let brain = brain.read().await;
 
     brain.get_weights(token).map(|edges| {
         let sep = String::from("\n");

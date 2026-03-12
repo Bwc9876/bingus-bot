@@ -33,13 +33,13 @@ impl DumpChainCommand {
         let mut brotli_writer = brotli::CompressorWriter::with_params(&mut buf, 4096, &params);
 
         if compat.unwrap_or_default() {
-            let brain = ctx.brain_handle.lock().await;
+            let brain = ctx.brain_handle.read().await;
             let map = brain.as_legacy_hashmap();
             drop(brain);
             rmp_serde::encode::write(&mut brotli_writer, &map)
                 .context("Failed to legacy encode brain")?;
         } else {
-            let brain = ctx.brain_handle.lock().await;
+            let brain = ctx.brain_handle.read().await;
             rmp_serde::encode::write(&mut brotli_writer, &*brain)
                 .context("Failed to write serialized brain")?;
         }

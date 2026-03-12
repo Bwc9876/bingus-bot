@@ -26,7 +26,7 @@ use brotli::enc::BrotliEncoderParams;
 use log::{debug, error, info, warn};
 use prelude::*;
 use tokio::{
-    sync::Mutex,
+    sync::RwLock,
     time::{self, Duration},
 };
 use twilight_gateway::{
@@ -48,7 +48,7 @@ use crate::{
     status::update_status,
 };
 
-pub type BrainHandle = Mutex<Brain>;
+pub type BrainHandle = RwLock<Brain>;
 
 #[derive(Debug)]
 pub struct BotContext {
@@ -64,20 +64,20 @@ pub struct BotContext {
 
 async fn handle_discord_event(event: Event, ctx: Arc<BotContext>) -> Result {
     match event {
-        Event::MessageCreate(msg) => handle_discord_message(msg, ctx).await,
+        Event::MessageCreate(msg) => handle_discord_message(msg, ctx).await.context("While handling a new message"),
         Event::InteractionCreate(mut inter) => {
             if let Some(InteractionData::ApplicationCommand(data)) =
                 std::mem::take(&mut inter.0.data)
             {
-                handle_app_command(*data, ctx, inter.0).await
+                handle_app_command(*data, ctx, inter.0).await.context("While handling an app command")
             } else {
                 Ok(())
             }
         }
         Event::Ready(ev) => {
             info!("Connected to gateway as {}", ev.user.name);
-            let brain = ctx.brain_handle.lock().await;
-            update_status(&*brain, &ctx.shard_sender).context("Failed to update status")
+            let brain = ctx.brain_handle.read().await;
+            update_status(&*brain, &ctx.shard_sender).context("Failed to update status on ready")
         }
         _ => Ok(()),
     }
@@ -99,7 +99,7 @@ async fn save_brain(ctx: Arc<BotContext>) -> Result {
     let mut file = File::create(&ctx.brain_file_path).context("Failed to open brain file")?;
     let params = BrotliEncoderParams::default();
     let mut brotli_writer = brotli::CompressorWriter::with_params(&mut file, 4096, &params);
-    let brain = ctx.brain_handle.lock().await;
+    let brain = ctx.brain_handle.read().await;
     rmp_serde::encode::write(&mut brotli_writer, &*brain)
         .context("Failed to write serialized brain")?;
     debug!("Saved brain file");
@@ -145,7 +145,7 @@ async fn main() -> Result {
         info!("Creating new brain file at {brain_file_path:?}");
         Brain::default()
     };
-    let brain_handle = Mutex::new(brain);
+    let brain_handle = RwLock::new(brain);
 
     // Init
     let mut shard = Shard::new(ShardId::ONE, token.to_string(), intents);
@@ -174,12 +174,6 @@ async fn main() -> Result {
         pending_save: AtomicBool::new(false),
     });
 
-    info!("Ensuring brain is writable...");
-    save_brain(context.clone())
-        .await
-        .context("Brain file is not writable")?;
-    info!("Brain file saved");
-
     info!("Registering Commands...");
     register_all_commands(context.clone()).await?;
 
@@ -197,7 +191,6 @@ async fn main() -> Result {
             Ok(()) = tokio::signal::ctrl_c() => {
                 info!("SIGINT: Closing connection and saving");
                 shard.close(CloseFrame::NORMAL);
-                break;
             }
             _ = interval.tick() => {
                 debug!("Save Interval");
@@ -214,7 +207,7 @@ async fn main() -> Result {
             opt = shard.next_event(EventTypeFlags::all()) => {
                 match opt {
                     Some(Ok(Event::GatewayClose(_))) | None => {
-                        info!("Disconnected from Discord: Saving brain and exiting");
+                        info!("Disconnected from Discord");
                         break;
                     }
                     Some(Ok(event)) => {
@@ -233,11 +226,11 @@ async fn main() -> Result {
         }
     }
 
-    save_brain(context)
-        .await
-        .context("Failed to write brain file on exit")?;
-
-    info!("Save Complete, Exiting");
+    if context.pending_save.load(Ordering::Relaxed) {
+        save_brain(context)
+            .await
+            .context("Failed to write brain file on exit")?;
+    }
 
     Ok(())
 }
