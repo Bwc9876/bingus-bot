@@ -27,7 +27,6 @@ use tokio::{
     sync::Mutex,
     time::{self, Duration},
 };
-use twilight_cache_inmemory::{DefaultInMemoryCache, ResourceType};
 use twilight_gateway::{
     CloseFrame, Event, EventTypeFlags, Intents, MessageSender, Shard, ShardId, StreamExt,
 };
@@ -131,14 +130,6 @@ async fn main() -> Result {
     // Init
     let mut shard = Shard::new(ShardId::ONE, token.to_string(), intents);
     let http = HttpClient::new(token.to_string());
-    let cache = DefaultInMemoryCache::builder()
-        .resource_types(
-            ResourceType::MESSAGE
-                | ResourceType::USER
-                | ResourceType::CHANNEL
-                | ResourceType::USER_CURRENT,
-        )
-        .build();
 
     let self_id = http
         .current_user_application()
@@ -198,7 +189,6 @@ async fn main() -> Result {
             opt = shard.next_event(EventTypeFlags::all()) => {
                 match opt {
                     Some(Ok(event)) => {
-                        cache.update(&event);
                         let ctx = context.clone();
                         tokio::spawn(async move {
                             if let Err(why) = handle_discord_event(event, ctx).await {
