@@ -7,7 +7,8 @@ use twilight_model::{
 };
 
 use crate::{
-    BotContext, brain::Brain, cmd::DEFER_INTER_RESP_EPHEMERAL, prelude::*, status::update_status,
+    BROTLI_BUF_SIZE, BotContext, brain::Brain, cmd::DEFER_INTER_RESP_EPHEMERAL, prelude::*,
+    status::update_status,
 };
 
 #[derive(CommandModel, CreateCommand)]
@@ -39,7 +40,7 @@ impl LoadChainCommand {
                 .await
                 .context("Failed to decode as bytes")?,
         );
-        let mut brotli_stream = brotli::Decompressor::new(&mut data, 4096);
+        let mut brotli_stream = brotli::Decompressor::new(&mut data, BROTLI_BUF_SIZE);
 
         let new_brain: Brain = if compat.unwrap_or_default() {
             Brain::from_legacy_hashmap(

@@ -22,7 +22,7 @@ use std::{
     },
 };
 
-use brotli::enc::BrotliEncoderParams;
+use brotli::enc::{BrotliEncoderParams, backward_references::BrotliEncoderMode};
 use log::{debug, error, info, warn};
 use prelude::*;
 use tokio::{
@@ -64,12 +64,16 @@ pub struct BotContext {
 
 async fn handle_discord_event(event: Event, ctx: Arc<BotContext>) -> Result {
     match event {
-        Event::MessageCreate(msg) => handle_discord_message(msg, ctx).await.context("While handling a new message"),
+        Event::MessageCreate(msg) => handle_discord_message(msg, ctx)
+            .await
+            .context("While handling a new message"),
         Event::InteractionCreate(mut inter) => {
             if let Some(InteractionData::ApplicationCommand(data)) =
                 std::mem::take(&mut inter.0.data)
             {
-                handle_app_command(*data, ctx, inter.0).await.context("While handling an app command")
+                handle_app_command(*data, ctx, inter.0)
+                    .await
+                    .context("While handling an app command")
             } else {
                 Ok(())
             }
@@ -83,10 +87,19 @@ async fn handle_discord_event(event: Event, ctx: Arc<BotContext>) -> Result {
     }
 }
 
+const BROTLI_BUF_SIZE: usize = 1024 * 1000;
+fn get_brotli_params() -> BrotliEncoderParams {
+    BrotliEncoderParams {
+        quality: 5,
+        mode: BrotliEncoderMode::BROTLI_MODE_TEXT,
+        ..Default::default()
+    }
+}
+
 fn load_brain(path: &Path) -> Result<Option<Brain>> {
     if path.exists() {
         let mut file = File::open(path).context("Failed to open brain file")?;
-        let mut brotli_stream = brotli::Decompressor::new(&mut file, 4096);
+        let mut brotli_stream = brotli::Decompressor::new(&mut file, BROTLI_BUF_SIZE);
         rmp_serde::from_read(&mut brotli_stream)
             .map(|b| Some(b))
             .context("Failed to decode brain file")
@@ -96,9 +109,10 @@ fn load_brain(path: &Path) -> Result<Option<Brain>> {
 }
 
 async fn save_brain(ctx: Arc<BotContext>) -> Result {
+    // TODO: Atomic saves
     let mut file = File::create(&ctx.brain_file_path).context("Failed to open brain file")?;
-    let params = BrotliEncoderParams::default();
-    let mut brotli_writer = brotli::CompressorWriter::with_params(&mut file, 4096, &params);
+    let mut brotli_writer =
+        brotli::CompressorWriter::with_params(&mut file, BROTLI_BUF_SIZE, &get_brotli_params());
     let brain = ctx.brain_handle.read().await;
     rmp_serde::encode::write(&mut brotli_writer, &*brain)
         .context("Failed to write serialized brain")?;

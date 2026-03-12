@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
-use brotli::enc::BrotliEncoderParams;
 use twilight_interactions::command::{CommandModel, CreateCommand};
 use twilight_model::{
     application::interaction::{Interaction, application_command::CommandData},
     http::attachment::Attachment,
 };
 
-use crate::{BotContext, cmd::DEFER_INTER_RESP_EPHEMERAL, prelude::*};
+use crate::{
+    BROTLI_BUF_SIZE, BotContext, cmd::DEFER_INTER_RESP_EPHEMERAL, get_brotli_params, prelude::*,
+};
 
 #[derive(CommandModel, CreateCommand)]
 #[command(name = "dump_chain", desc = "Dump chain")]
@@ -29,8 +30,8 @@ impl DumpChainCommand {
             .context("Failed to defer")?;
 
         let mut buf = Vec::<u8>::with_capacity(4096);
-        let params = BrotliEncoderParams::default();
-        let mut brotli_writer = brotli::CompressorWriter::with_params(&mut buf, 4096, &params);
+        let mut brotli_writer =
+            brotli::CompressorWriter::with_params(&mut buf, BROTLI_BUF_SIZE, &get_brotli_params());
 
         if compat.unwrap_or_default() {
             let brain = ctx.brain_handle.read().await;
