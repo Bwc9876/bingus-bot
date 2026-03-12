@@ -20,17 +20,20 @@ pub async fn handle_discord_message(msg: Box<MessageCreate>, ctx: Arc<BotContext
         .is_some_and(|flags| flags.contains(MessageFlags::EPHEMERAL));
     let is_dm = msg.guild_id.is_none();
 
-    // Should Ingest Message?
-    if is_self || !is_normal_message || is_ephemeral || is_dm {
+    // Should we consider this message at all?
+    if !is_normal_message || is_ephemeral || is_dm {
         return Ok(());
     }
 
-    let mut brain = ctx.brain_handle.lock().await;
-    let learned_new_word = brain.ingest(&msg.content);
-    ctx.pending_save.store(true, Ordering::Relaxed);
+    // Should we learn from this message? (We don't want to learn from ourselves)
+    if !is_self {
+        let mut brain = ctx.brain_handle.lock().await;
+        let learned_new_word = brain.ingest(&msg.content);
+        ctx.pending_save.store(true, Ordering::Relaxed);
 
-    if learned_new_word {
-        update_status(&*brain, &ctx.shard_sender).context("Failed to update status")?;
+        if learned_new_word {
+            update_status(&*brain, &ctx.shard_sender).context("Failed to update status")?;
+        }
     }
 
     // Should Reply to Message?
@@ -52,20 +55,27 @@ pub async fn handle_discord_message(msg: Box<MessageCreate>, ctx: Arc<BotContext
         done_tx.send(()).ok();
     });
 
+    let brain = ctx.brain_handle.lock().await;
     if let Some(reply_text) = brain
         .respond(&msg.content, is_self, Some(typ_tx))
         .filter(|s| !s.trim().is_empty())
     {
         drop(brain);
         done_rx.await.ok();
-        ctx.http
+        let allowed_mentions = AllowedMentions::default();
+        let my_msg = ctx
+            .http
             .create_message(msg.channel_id)
             .content(&reply_text)
-            .reply(msg.id)
-            .fail_if_not_exists(false)
-            .allowed_mentions(Some(&AllowedMentions::default()))
-            .await
-            .context("Failed to send message")?;
+            .allowed_mentions(Some(&allowed_mentions));
+
+        let my_msg = if !is_self {
+            my_msg.reply(msg.id).fail_if_not_exists(false)
+        } else {
+            my_msg
+        };
+
+        my_msg.await.context("Failed to send message")?;
     }
 
     Ok(())

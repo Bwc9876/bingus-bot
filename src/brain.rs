@@ -96,7 +96,7 @@ impl Brain {
         let chance = if is_self { 45 } else { 80 };
         let roll = rand.u8(0..=100);
 
-        (FORCE_REPLIES && !is_self) || roll <= chance
+        (FORCE_REPLIES) || roll <= chance
     }
 
     fn extract_final_token(msg: &str) -> Option<Token> {

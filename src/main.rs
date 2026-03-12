@@ -51,18 +51,17 @@ pub struct BotContext {
 
 async fn handle_discord_event(event: Event, ctx: Arc<BotContext>) -> Result {
     match event {
-        Event::MessageCreate(msg) => handle_discord_message(msg, ctx).await?,
+        Event::MessageCreate(msg) => handle_discord_message(msg, ctx).await,
         Event::Ready(ev) => {
             info!("Connected to gateway as {}", ev.user.name);
             let brain = ctx.brain_handle.lock().await;
-            update_status(&*brain, &ctx.shard_sender).context("Failed to update status")?;
+            update_status(&*brain, &ctx.shard_sender).context("Failed to update status")
         }
         _ => {
             debug!("Ev: {event:?}");
+            Ok(())
         }
     }
-
-    Ok(())
 }
 
 fn load_brain(path: &Path) -> Result<Option<Brain>> {
@@ -176,6 +175,9 @@ async fn main() -> Result {
 
     loop {
         tokio::select! {
+
+            biased;
+
             Ok(()) = tokio::signal::ctrl_c() => {
                 info!("SIGINT: Closing connection and saving");
                 shard.close(CloseFrame::NORMAL);
