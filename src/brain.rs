@@ -17,7 +17,6 @@ pub struct Edges(HashMap<Token, Weight>, u64);
 pub struct Brain(HashMap<Token, Edges>);
 
 pub type TypingSender = oneshot::Sender<bool>;
-pub type TypingReceiver = oneshot::Receiver<bool>;
 
 pub fn format_token(tok: &Token) -> String {
     if let Some(w) = tok {
@@ -49,12 +48,18 @@ impl Edges {
         }
     }
 
-    fn sample(&self, rand: &mut fastrand::Rng) -> Option<Token> {
-        let mut dist_left = rand.f64() * self.1 as f64;
-        for (tok, weight) in self.0.iter() {
+    fn sample(&self, rand: &mut fastrand::Rng, allow_end: bool) -> Option<&Token> {
+        let total_dist = if !allow_end && let Some(weight) = self.0.get(&None) {
+            self.1 - *weight as u64
+        } else {
+            self.1
+        };
+        let mut dist_left = rand.f64() * total_dist as f64;
+
+        for (tok, weight) in self.0.iter().filter(|(tok, _)| allow_end || tok.is_some()) {
             dist_left -= *weight as f64;
             if dist_left < 0.0 {
-                return Some(tok.clone());
+                return Some(tok);
             }
         }
         None
@@ -161,26 +166,35 @@ impl Brain {
 
         // Get our final token, or a random one if the message has nothing, or don't reply at all
         // if we have no tokens at all.
-        let mut current_token =
-            Self::extract_final_token(msg).or_else(|| self.random_token(&mut rng))?;
+        let last_token = Self::extract_final_token(msg).or_else(|| self.random_token(&mut rng))?;
+        let mut current_token = &last_token;
 
         let mut chain = Vec::with_capacity(MAX_TOKENS);
         let mut has_triggered_typing = false;
 
-        while let Some(tok) = current_token
-            && chain.len() <= MAX_TOKENS
-        {
-            if let Some(edges) = self.0.get(&Some(tok)) {
-                let next = edges.sample(&mut rng).flatten();
-                if let Some(ref s) = next {
-                    chain.push(s.clone());
-                    if !has_triggered_typing && let Some(typ) = typing_oneshot.take() {
-                        typ.send(true).ok();
+        while current_token.is_some() && chain.len() <= MAX_TOKENS {
+            if let Some(edges) = self.0.get(current_token) {
+                let next = edges.sample(&mut rng, chain.len() > 2);
+
+                if let Some(ref tok) = next {
+                    if let Some(s) = tok {
+                        // Is this a non-ending token? If so, push it to our chain!
+                        chain.push(s.clone());
+                        if !has_triggered_typing && let Some(typ) = typing_oneshot.take() {
+                            typ.send(true).ok();
+                        }
+                        current_token = tok;
+                    } else {
+                        // If we reached an end token, stop chaining
+                        break;
                     }
+                } else {
+                    // If we failed to sample any tokens, we can't continue the chain
+                    break;
                 }
-                current_token = next;
             } else {
-                current_token = None;
+                // If we don't know the current word, we can't continue the chain
+                break;
             }
         }
 
@@ -243,6 +257,21 @@ mod tests {
         );
         let reply = brain.respond("hello", false, None);
         assert_eq!(reply, Some("world".to_string()));
+    }
+
+    #[test]
+    fn at_least_2_tokens() {
+        let mut brain = Brain::default();
+        brain.ingest("hello world");
+        brain.ingest("hello");
+        brain.ingest("hello");
+        brain.ingest("hello");
+
+        for _ in 0..100 {
+            // I'm too lazy to mock lazyrand LOL!!
+            let reply = brain.respond("hello", false, None);
+            assert_eq!(reply, Some("world".to_string()));
+        }
     }
 
     #[test]
