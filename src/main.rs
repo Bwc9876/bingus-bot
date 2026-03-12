@@ -81,7 +81,7 @@ async fn handle_discord_event(event: Event, ctx: Arc<BotContext>) -> Result {
         Event::Ready(ev) => {
             info!("Connected to gateway as {}", ev.user.name);
             let brain = ctx.brain_handle.read().await;
-            update_status(&*brain, &ctx.shard_sender).context("Failed to update status on ready")
+            update_status(&brain, &ctx.shard_sender).context("Failed to update status on ready")
         }
         _ => Ok(()),
     }
@@ -101,7 +101,7 @@ fn load_brain(path: &Path) -> Result<Option<Brain>> {
         let mut file = File::open(path).context("Failed to open brain file")?;
         let mut brotli_stream = brotli::Decompressor::new(&mut file, BROTLI_BUF_SIZE);
         rmp_serde::from_read(&mut brotli_stream)
-            .map(|b| Some(b))
+            .map(Some)
             .context("Failed to decode brain file")
     } else {
         Ok(None)

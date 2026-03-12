@@ -243,7 +243,7 @@ impl Brain {
         Self(
             map.into_iter()
                 .map(|(k, v)| {
-                    let sum = v.values().map(|w| *w as u64).sum::<u64>() as u64;
+                    let sum = v.values().map(|w| *w as u64).sum::<u64>();
                     let edges = Edges(
                         v.into_iter()
                             .map(|(t, w)| (Self::read_legacy_token(t), w))

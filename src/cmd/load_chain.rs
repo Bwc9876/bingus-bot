@@ -54,7 +54,7 @@ impl LoadChainCommand {
             let mut brain = ctx.brain_handle.write().await;
             brain.merge_from(new_brain);
             ctx.pending_save.store(true, Ordering::Relaxed);
-            update_status(&*brain, &ctx.shard_sender).context("Failed to update status")?;
+            update_status(&brain, &ctx.shard_sender).context("Failed to update status")?;
         }
 
         client

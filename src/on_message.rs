@@ -17,11 +17,11 @@ use crate::{BotContext, prelude::*, status::update_status};
 
 async fn learn_message(msg: &str, ctx: Arc<BotContext>) -> Result {
     let mut brain = ctx.brain_handle.write().await;
-    let learned_new_word = brain.ingest(&msg);
+    let learned_new_word = brain.ingest(msg);
     ctx.pending_save.store(true, Ordering::Relaxed);
 
     if learned_new_word {
-        update_status(&*brain, &ctx.shard_sender).context("Failed to update status")?;
+        update_status(&brain, &ctx.shard_sender).context("Failed to update status")?;
     }
 
     Ok(())
@@ -40,17 +40,17 @@ async fn reply_message(
     let ctx_typ = ctx.clone();
     let typ_id = channel_id;
     tokio::spawn(async move {
-        if typ_rx.await.ok().is_some_and(|start| start) {
-            if let Err(why) = ctx_typ.http.create_typing_trigger(typ_id).await {
-                warn!("Failed to set typing indicator:\n{why:?}");
-            }
+        if typ_rx.await.ok().is_some_and(|start| start)
+            && let Err(why) = ctx_typ.http.create_typing_trigger(typ_id).await
+        {
+            warn!("Failed to set typing indicator:\n{why:?}");
         }
         done_tx.send(()).ok();
     });
 
     let brain = ctx.brain_handle.read().await;
     if let Some(reply_text) = brain
-        .respond(&msg, is_self, Some(typ_tx))
+        .respond(msg, is_self, Some(typ_tx))
         .filter(|s| !s.trim().is_empty())
     {
         drop(brain);
