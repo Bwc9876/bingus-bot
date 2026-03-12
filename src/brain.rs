@@ -323,6 +323,23 @@ mod tests {
     }
 
     #[test]
+    fn none_on_empty() {
+        let mut brain = Brain::default();
+
+        let reply = brain.respond("hello", false, false, None);
+        assert_eq!(reply, None);
+    }
+
+    #[test]
+    fn none_on_end() {
+        let mut brain = Brain::default();
+        brain.ingest("world hello");
+
+        let reply = brain.respond("hello", false, false, None);
+        assert_eq!(reply, None);
+    }
+
+    #[test]
     fn long_chain() {
         const LETTERS: &str = "abcdefghijklmnopqrstuvwxyz";
         let msg = LETTERS
