@@ -1,6 +1,8 @@
 #![feature(iter_map_windows)]
+#![feature(iter_intersperse)]
 
 mod brain;
+mod cmd;
 mod on_message;
 mod status;
 
@@ -31,9 +33,20 @@ use twilight_gateway::{
     CloseFrame, Event, EventTypeFlags, Intents, MessageSender, Shard, ShardId, StreamExt,
 };
 use twilight_http::Client as HttpClient;
-use twilight_model::id::{Id, marker::UserMarker};
+use twilight_model::{
+    application::interaction::InteractionData,
+    id::{
+        Id,
+        marker::{ApplicationMarker, UserMarker},
+    },
+};
 
-use crate::{brain::Brain, on_message::handle_discord_message, status::update_status};
+use crate::{
+    brain::Brain,
+    cmd::{handle_app_command, register_all_commands},
+    on_message::handle_discord_message,
+    status::update_status,
+};
 
 pub type BrainHandle = Mutex<Brain>;
 
@@ -41,6 +54,7 @@ pub type BrainHandle = Mutex<Brain>;
 pub struct BotContext {
     http: HttpClient,
     self_id: Id<UserMarker>,
+    app_id: Id<ApplicationMarker>,
     brain_file_path: PathBuf,
     reply_channels: HashSet<u64>,
     brain_handle: BrainHandle,
@@ -51,15 +65,21 @@ pub struct BotContext {
 async fn handle_discord_event(event: Event, ctx: Arc<BotContext>) -> Result {
     match event {
         Event::MessageCreate(msg) => handle_discord_message(msg, ctx).await,
+        Event::InteractionCreate(mut inter) => {
+            if let Some(InteractionData::ApplicationCommand(data)) =
+                std::mem::take(&mut inter.0.data)
+            {
+                handle_app_command(*data, ctx, inter.0).await
+            } else {
+                Ok(())
+            }
+        }
         Event::Ready(ev) => {
             info!("Connected to gateway as {}", ev.user.name);
             let brain = ctx.brain_handle.lock().await;
             update_status(&*brain, &ctx.shard_sender).context("Failed to update status")
         }
-        _ => {
-            debug!("Ev: {event:?}");
-            Ok(())
-        }
+        _ => Ok(()),
     }
 }
 
@@ -131,20 +151,22 @@ async fn main() -> Result {
     let mut shard = Shard::new(ShardId::ONE, token.to_string(), intents);
     let http = HttpClient::new(token.to_string());
 
-    let self_id = http
+    let app = http
         .current_user_application()
         .await
         .context("Failed to get current App")?
         .model()
         .await
-        .context("Failed to deserialize")?
-        .bot
-        .context("App is not a bot!")?
-        .id;
+        .context("Failed to deserialize")?;
+
+    let app_id = app.id;
+
+    let self_id = app.bot.context("App is not a bot!")?.id;
 
     let context = Arc::new(BotContext {
         http,
         self_id,
+        app_id,
         reply_channels,
         brain_file_path,
         brain_handle,
@@ -157,6 +179,9 @@ async fn main() -> Result {
         .await
         .context("Brain file is not writable")?;
     info!("Brain file saved");
+
+    info!("Registering Commands...");
+    register_all_commands(context.clone()).await?;
 
     let mut interval = time::interval(Duration::from_secs(60));
     interval.tick().await;
@@ -188,6 +213,10 @@ async fn main() -> Result {
             },
             opt = shard.next_event(EventTypeFlags::all()) => {
                 match opt {
+                    Some(Ok(Event::GatewayClose(_))) | None => {
+                        info!("Disconnected from Discord: Saving brain and exiting");
+                        break;
+                    }
                     Some(Ok(event)) => {
                         let ctx = context.clone();
                         tokio::spawn(async move {
@@ -198,10 +227,6 @@ async fn main() -> Result {
                     }
                     Some(Err(why)) => {
                         warn!("Failed to receive event:\n{why:?}");
-                    }
-                    None => {
-                        info!("Disconnected from Discord: Saving brain and exiting");
-                        break;
                     }
                 }
             }

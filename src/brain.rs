@@ -251,8 +251,8 @@ mod tests {
         let msg = LETTERS
             .chars()
             .map(|c| c.to_string())
-            .collect::<Vec<_>>()
-            .join(" ");
+            .intersperse(" ".to_string())
+            .collect::<String>();
         let mut brain = Brain::default();
         brain.ingest(&msg);
         let reply = brain.respond("a", false, None);
@@ -261,8 +261,8 @@ mod tests {
             .skip(1)
             .take(21)
             .map(|c| c.to_string())
-            .collect::<Vec<_>>()
-            .join(" ");
+            .intersperse(" ".to_string())
+            .collect::<String>();
         assert_eq!(reply, Some(expected));
     }
 
