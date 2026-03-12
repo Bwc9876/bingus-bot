@@ -49,10 +49,7 @@ async fn reply_message(
     });
 
     let brain = ctx.brain_handle.read().await;
-    if let Some(reply_text) = brain
-        .respond(msg, is_self, Some(typ_tx))
-        .filter(|s| !s.trim().is_empty())
-    {
+    if let Some(reply_text) = brain.respond(msg, is_self, false, Some(typ_tx)) {
         drop(brain);
         done_rx.await.ok();
         let allowed_mentions = AllowedMentions::default();
@@ -75,7 +72,6 @@ async fn reply_message(
 }
 
 pub async fn handle_discord_message(msg: Box<MessageCreate>, ctx: Arc<BotContext>) -> Result {
-    let channel_id = msg.channel_id.get();
     let is_self = msg.author.id == ctx.self_id;
     let is_normal_message = matches!(msg.kind, MessageType::Regular | MessageType::Reply);
     let is_ephemeral = msg
@@ -89,7 +85,7 @@ pub async fn handle_discord_message(msg: Box<MessageCreate>, ctx: Arc<BotContext
     }
 
     // Should Reply to Message?
-    if ctx.reply_channels.contains(&channel_id) {
+    if ctx.reply_channels.contains(&msg.channel_id) {
         reply_message(&msg.content, msg.id, msg.channel_id, is_self, &ctx)
             .await
             .context("Bingus failed to reply to a message")?;

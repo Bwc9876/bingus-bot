@@ -8,7 +8,7 @@ use twilight_model::{
 
 use crate::{
     BROTLI_BUF_SIZE, BotContext, brain::Brain, cmd::DEFER_INTER_RESP_EPHEMERAL, prelude::*,
-    status::update_status,
+    require_owner, status::update_status,
 };
 
 #[derive(CommandModel, CreateCommand)]
@@ -22,10 +22,12 @@ pub struct LoadChainCommand {
 
 impl LoadChainCommand {
     pub async fn handle(inter: Interaction, data: CommandData, ctx: Arc<BotContext>) -> Result {
+        let client = ctx.http.interaction(ctx.app_id);
+
+        require_owner!(inter, ctx, client);
+
         let Self { file, compat } =
             Self::from_interaction(data.into()).context("Failed to parse command data")?;
-
-        let client = ctx.http.interaction(ctx.app_id);
 
         client
             .create_response(inter.id, &inter.token, &DEFER_INTER_RESP_EPHEMERAL)

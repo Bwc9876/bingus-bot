@@ -37,7 +37,7 @@ use twilight_model::{
     application::interaction::InteractionData,
     id::{
         Id,
-        marker::{ApplicationMarker, UserMarker},
+        marker::{ApplicationMarker, ChannelMarker, UserMarker},
     },
 };
 
@@ -55,8 +55,9 @@ pub struct BotContext {
     http: HttpClient,
     self_id: Id<UserMarker>,
     app_id: Id<ApplicationMarker>,
+    owners: HashSet<Id<UserMarker>>,
     brain_file_path: PathBuf,
-    reply_channels: HashSet<u64>,
+    reply_channels: HashSet<Id<ChannelMarker>>,
     brain_handle: BrainHandle,
     shard_sender: MessageSender,
     pending_save: AtomicBool,
@@ -137,10 +138,10 @@ async fn main() -> Result {
 
     // Config
     let token_file = std::env::var("TOKEN_FILE").context("Missing TOKEN_FILE env var")?;
-    let reply_channels: HashSet<u64> = std::env::var("REPLY_CHANNELS")
+    let reply_channels = std::env::var("REPLY_CHANNELS")
         .context("Missing REPLY_CHANNELS env var")?
         .split(",")
-        .map(|s| s.trim().parse::<u64>())
+        .map(|s| s.trim().parse::<u64>().map(|c| Id::new(c)))
         .collect::<Result<_, _>>()
         .context("Invalid channel IDs for REPLY_CHANNELS")?;
     let brain_file_path =
@@ -177,10 +178,20 @@ async fn main() -> Result {
 
     let self_id = app.bot.context("App is not a bot!")?.id;
 
+    let owners = if let Some(user) = app.owner {
+        HashSet::from_iter([user.id])
+    } else if let Some(team) = app.team {
+        team.members.iter().map(|m| m.user.id).collect()
+    } else {
+        warn!("No Owner?? Bingus is free!!!");
+        HashSet::new()
+    };
+
     let context = Arc::new(BotContext {
         http,
         self_id,
         app_id,
+        owners,
         reply_channels,
         brain_file_path,
         brain_handle,

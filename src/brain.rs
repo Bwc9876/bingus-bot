@@ -152,6 +152,7 @@ impl Brain {
         &self,
         msg: &str,
         is_self: bool,
+        force_reply: bool,
         mut typing_oneshot: Option<TypingSender>,
     ) -> Option<String> {
         const MAX_TOKENS: usize = 20;
@@ -159,7 +160,7 @@ impl Brain {
         let mut rng = fastrand::Rng::new();
 
         // Roll if we should reply
-        if !Self::should_reply(&mut rng, is_self) {
+        if !force_reply && !Self::should_reply(&mut rng, is_self) {
             debug!("Failed roll");
             return None;
         }
@@ -202,7 +203,11 @@ impl Brain {
             typ.send(false).ok();
         }
 
-        Some(chain.join(" "))
+        if chain.is_empty() {
+            None
+        } else {
+            Some(chain.join(" ")).filter(|s| !s.trim().is_empty())
+        }
     }
 
     pub fn word_count(&self) -> usize {
@@ -298,7 +303,7 @@ mod tests {
             hello_edges.0,
             HashMap::from_iter([(Some("world".to_string()), 1)])
         );
-        let reply = brain.respond("hello", false, None);
+        let reply = brain.respond("hello", false, false, None);
         assert_eq!(reply, Some("world".to_string()));
     }
 
@@ -312,7 +317,7 @@ mod tests {
 
         for _ in 0..100 {
             // I'm too lazy to mock lazyrand LOL!!
-            let reply = brain.respond("hello", false, None);
+            let reply = brain.respond("hello", false, false, None);
             assert_eq!(reply, Some("world".to_string()));
         }
     }
@@ -327,7 +332,7 @@ mod tests {
             .collect::<String>();
         let mut brain = Brain::default();
         brain.ingest(&msg);
-        let reply = brain.respond("a", false, None);
+        let reply = brain.respond("a", false, false, None);
         let expected = LETTERS
             .chars()
             .skip(1)

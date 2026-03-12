@@ -8,6 +8,7 @@ use twilight_model::{
 
 use crate::{
     BROTLI_BUF_SIZE, BotContext, cmd::DEFER_INTER_RESP_EPHEMERAL, get_brotli_params, prelude::*,
+    require_owner,
 };
 
 #[derive(CommandModel, CreateCommand)]
@@ -19,10 +20,12 @@ pub struct DumpChainCommand {
 
 impl DumpChainCommand {
     pub async fn handle(inter: Interaction, data: CommandData, ctx: Arc<BotContext>) -> Result {
+        let client = ctx.http.interaction(ctx.app_id);
+
+        require_owner!(inter, ctx, client);
+
         let Self { compat } =
             Self::from_interaction(data.into()).context("Failed to parse command data")?;
-
-        let client = ctx.http.interaction(ctx.app_id);
 
         client
             .create_response(inter.id, &inter.token, &DEFER_INTER_RESP_EPHEMERAL)

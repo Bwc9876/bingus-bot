@@ -11,7 +11,7 @@ use crate::{BotContext, BrainHandle, brain::format_token, cmd::DEFER_INTER_RESP,
 #[derive(CommandModel, CreateCommand)]
 #[command(name = "weights", desc = "Get the weights of a token")]
 pub struct WeightsCommand {
-    /// Message to send
+    /// Token to view the weights of
     token: String,
 }
 
