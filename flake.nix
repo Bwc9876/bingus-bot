@@ -27,7 +27,7 @@
   }:
     flakelight ./. (
       let
-        selectToolchain = pkgs: pkgs.fenix.default;
+        selectToolchain = pkgs: pkgs.fenix.complete;
         mkCrane = pkgs: (crane.mkLib pkgs).overrideToolchain (selectToolchain pkgs).toolchain;
         mkCraneStuff = pkgs: let
           craneLib = mkCrane pkgs;
@@ -58,7 +58,12 @@
             };
           };
         };
-        devShell = pkgs: (mkCrane pkgs).devShell {};
+        devShell = pkgs:
+          (mkCrane pkgs).devShell {
+            buildInputs = with pkgs; [
+              cargo-nextest
+            ];
+          };
         nixosModule = {
           lib,
           pkgs,
