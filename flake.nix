@@ -10,6 +10,10 @@
     fenix.url = "github:nix-community/fenix";
     fenix.inputs.nixpkgs.follows = "nixpkgs";
     crane.url = "github:ipetkov/crane";
+    advisory-db = {
+      url = "github:rustsec/advisory-db";
+      flake = false;
+    };
   };
 
   outputs = inputs @ {
@@ -19,11 +23,28 @@
     flakelight-treefmt,
     fenix,
     crane,
+    advisory-db,
   }:
     flakelight ./. (
       let
         selectToolchain = pkgs: pkgs.fenix.default;
         mkCrane = pkgs: (crane.mkLib pkgs).overrideToolchain (selectToolchain pkgs).toolchain;
+        mkCraneStuff = pkgs: let
+          src = ./.;
+          commonArgs = {
+            src = (mkCrane pkgs).cleanCargoSource src;
+            strictDeps = true;
+          };
+          craneLib = mkCrane pkgs;
+          cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+        in {
+          inherit
+            src
+            commonArgs
+            craneLib
+            cargoArtifacts
+            ;
+        };
       in {
         inherit inputs;
         imports = [flakelight-treefmt.flakelightModules.default];
@@ -45,21 +66,39 @@
           lib,
           pkgs,
         }: let
-          craneLib = mkCrane pkgs;
-          src = ./.;
-          commonArgs = {
-            inherit src;
-            strictDeps = true;
-          };
-          cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-          bingus = craneLib.buildPackage (
+          inherit (mkCraneStuff pkgs) craneLib commonArgs cargoArtifacts;
+        in
+          craneLib.buildPackage (
             commonArgs
             // {
               inherit cargoArtifacts;
+              doCheck = false;
             }
           );
-        in
-          bingus;
+        checks = pkgs: let
+          inherit (mkCraneStuff pkgs) craneLib commonArgs cargoArtifacts;
+        in {
+          bingus-clippy = craneLib.cargoClippy (
+            commonArgs
+            // {
+              inherit cargoArtifacts;
+              cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+            }
+          );
+          bingus-audit = craneLib.cargoAudit {
+            inherit (commonArgs) src;
+            inherit advisory-db;
+          };
+          bingus-nextest = craneLib.cargoNextest (
+            commonArgs
+            // {
+              inherit cargoArtifacts;
+              partitions = 1;
+              partitionType = "count";
+              cargoNextestPartitionsExtraArgs = "--no-tests=pass";
+            }
+          );
+        };
       }
     );
 }
