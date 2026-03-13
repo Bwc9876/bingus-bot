@@ -278,6 +278,10 @@ mod tests {
     use super::*;
     use std::default::Default;
 
+    extern crate test;
+
+    use test::Bencher;
+
     #[test]
     fn ingest_parse() {
         let tokens = Brain::parse("Hello world").collect::<Vec<_>>();
@@ -400,5 +404,34 @@ mod tests {
             new_edges.0,
             HashMap::from_iter([(Some("word".to_string()), 1)])
         );
+    }
+
+    #[bench]
+    fn bench_learn(b: &mut Bencher) {
+        b.iter(|| {
+            let mut brain = Brain::default();
+            brain.ingest(
+                "your name is bingus the discord bot and this message is a test for benchmarking",
+            );
+        });
+    }
+
+    #[bench]
+    fn bench_respond(b: &mut Bencher) {
+        let mut brain = Brain::default();
+        brain.ingest(
+            "your name is bingus the discord bot and this message is a test for benchmarking",
+        );
+        b.iter(|| {
+            brain.respond("your", false, true, None);
+        });
+    }
+
+    #[bench]
+    fn bench_learn_large(b: &mut Bencher) {
+        b.iter(|| {
+            let mut brain = Brain::default();
+            brain.ingest(include_str!("lorem.txt"));
+        });
     }
 }

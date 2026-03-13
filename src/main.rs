@@ -1,3 +1,4 @@
+#![feature(test)]
 #![feature(iter_map_windows)]
 #![feature(iter_intersperse)]
 
