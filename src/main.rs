@@ -150,7 +150,13 @@ async fn main() -> Result {
     let reply_channels = std::env::var("REPLY_CHANNELS")
         .context("Missing REPLY_CHANNELS env var")?
         .split(",")
-        .map(|s| s.trim().parse::<u64>().map(|c| Id::new(c)))
+        .filter_map(|s| {
+            if s.trim().is_empty() {
+                None
+            } else {
+                Some(s.trim().parse::<u64>().map(|c| Id::new(c)))
+            }
+        })
         .collect::<Result<_, _>>()
         .context("Invalid channel IDs for REPLY_CHANNELS")?;
     let brain_file_path =
