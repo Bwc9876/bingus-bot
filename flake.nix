@@ -59,10 +59,14 @@
           };
         };
         devShell = pkgs: (mkCrane pkgs).devShell {};
-        nixosModule = {lib, ...}: {
+        nixosModule = {
+          lib,
+          pkgs,
+          ...
+        }: {
           imports = [./nixosModule.nix];
 
-          services.bingus-bot.package = lib.mkDefault self.packages.default;
+          services.bingus-bot.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
         };
         package = {
           rustPlatform,
