@@ -44,7 +44,7 @@ in {
       environment = {
         REPLY_CHANNELS = replyChannelsStr;
         TOKEN_FILE = "%d/token";
-        BRAIN_FILE = "brain.msgpackz";
+        BRAIN_FILE = "%S/bingus/brain.msgpackz";
       };
 
       serviceConfig = {
