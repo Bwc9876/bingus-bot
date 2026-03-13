@@ -8,6 +8,12 @@ Simple markov chain-based auto replies to user messages.
 
 Use the NixOS module in this flake or build/set it up yourself. Just need Rust.
 
+### Discord Setup
+
+This bot will need the "Message Content" privileged gateway intent to learn from messages.
+
+It will also need the ability to send messages and read the message history of channels.
+
 ## Configuration
 
 ### `TOKEN_FILE`
@@ -23,6 +29,8 @@ Path to the file Bingus will save state in. The file will be created if not pres
 Comma-delimited list of channel IDs that Bingus should auto reply in.
 
 Bingus will learn from all channels he has access to but will only auto-reply in these ones.
+
+To retrieve this ID, enable developer mode in your client and right click the channel you wish to use, then click "Copy Channel ID".
 
 ## Commands
 
