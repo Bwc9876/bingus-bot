@@ -193,11 +193,12 @@ impl Brain {
         };
 
         let mut chain = Vec::with_capacity(MAX_TOKENS);
+        let sep = String::from(" ");
 
         while let Some(next @ Some(s)) = self.next_from(current_token, &mut rng, !chain.is_empty())
             && chain.len() <= MAX_TOKENS
         {
-            chain.push(s.clone());
+            chain.push(s);
             if let Some(typ) = typing_oneshot.take() {
                 typ.send(true).ok();
             }
@@ -211,7 +212,12 @@ impl Brain {
         if chain.is_empty() {
             None
         } else {
-            Some(chain.join(" ")).filter(|s| !s.trim().is_empty())
+            let s = chain
+                .into_iter()
+                .intersperse(&sep)
+                .cloned()
+                .collect::<String>();
+            Some(s).filter(|s| !s.trim().is_empty())
         }
     }
 
