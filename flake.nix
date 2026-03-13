@@ -73,6 +73,16 @@
             // {
               inherit cargoArtifacts;
               doCheck = false;
+
+              meta = with lib; {
+                mainProgram = "bingus-bot";
+                description = "A very clever kitty";
+                license = licenses.gpl3;
+                homepage = "https://tangled.org/bwc9876.dev/bingus-bot";
+                maintainers = with maintainers; [
+                  bwc9876
+                ];
+              };
             }
           );
         checks = pkgs: let
