@@ -104,38 +104,37 @@ impl Brain {
         (FORCE_REPLIES) || roll <= chance
     }
 
-    fn extract_final_token(msg: &str) -> Option<Token> {
+    fn extract_final_word(msg: &str) -> Option<String> {
         msg.split_ascii_whitespace()
             .last()
-            .map(Self::normalize_token)
+            .and_then(Self::normalize_token)
     }
 
-    fn random_token(&self, rand: &mut fastrand::Rng) -> Option<Token> {
+    fn random_token(&self, rand: &mut fastrand::Rng) -> Option<&Token> {
         let len = self.0.len();
         if len == 0 {
             None
         } else {
             let i = rand.usize(..len);
-            self.0.keys().nth(i).cloned()
+            self.0.keys().nth(i)
         }
     }
 
     pub fn ingest(&mut self, msg: &str) -> bool {
-        let mut learned_new_word = false;
-        // This is a silly way to do windows rust ppl :sob:
-        let _ = Self::parse(msg)
+        // Using reduce instead of .any here to prevent short circuting
+        Self::parse(msg)
             .map_windows(|[from, to]| {
                 if let Some(edge) = self.0.get_mut(from) {
                     edge.increment_token(to);
+                    false
                 } else {
                     let new = Edges(HashMap::from_iter([(to.clone(), 1)]), 1);
                     self.0.insert(from.clone(), new);
-                    learned_new_word = true;
+                    true
                 }
             })
-            .collect::<Vec<_>>();
-
-        learned_new_word
+            .reduce(|acc, c| acc || c)
+            .unwrap_or_default()
     }
 
     pub fn merge_from(&mut self, other: Self) {
@@ -146,6 +145,22 @@ impl Brain {
                 self.0.insert(k, v);
             }
         }
+    }
+
+    fn next_from(&self, tok: &Token, rand: &mut fastrand::Rng, allow_end: bool) -> Option<&Token> {
+        // Get the edges for the current token
+        // If we have that token, sample its edges
+        // Otherwise, if we don't know that token, and allow_end is false, try to pick a random token instead
+        self.0
+            .get(tok)
+            .and_then(|edges| edges.sample(rand, allow_end))
+            .or_else(|| {
+                if allow_end {
+                    None
+                } else {
+                    self.random_token(rand)
+                }
+            })
     }
 
     pub fn respond(
@@ -165,38 +180,28 @@ impl Brain {
             return None;
         }
 
-        // Get our final token, or a random one if the message has nothing, or don't reply at all
-        // if we have no tokens at all.
-        let last_token = Self::extract_final_token(msg).or_else(|| self.random_token(&mut rng))?;
-        let mut current_token = &last_token;
+        // Get the final token
+        let last_token = Self::extract_final_word(msg);
+
+        let mut current_token = if let Some(t) = last_token {
+            // We found a word at the end of the previous message
+            &Some(t)
+        } else {
+            // We couldn't find a word at the end of the last message, pick a random one
+            // If we *still* don't have a token, return early
+            self.random_token(&mut rng)?
+        };
 
         let mut chain = Vec::with_capacity(MAX_TOKENS);
-        let mut has_triggered_typing = false;
 
-        while current_token.is_some() && chain.len() <= MAX_TOKENS {
-            if let Some(edges) = self.0.get(current_token) {
-                let next = edges.sample(&mut rng, chain.len() > 2);
-
-                if let Some(ref tok) = next {
-                    if let Some(s) = tok {
-                        // Is this a non-ending token? If so, push it to our chain!
-                        chain.push(s.clone());
-                        if !has_triggered_typing && let Some(typ) = typing_oneshot.take() {
-                            typ.send(true).ok();
-                        }
-                        current_token = tok;
-                    } else {
-                        // If we reached an end token, stop chaining
-                        break;
-                    }
-                } else {
-                    // If we failed to sample any tokens, we can't continue the chain
-                    break;
-                }
-            } else {
-                // If we don't know the current word, we can't continue the chain
-                break;
+        while let Some(next @ Some(s)) = self.next_from(current_token, &mut rng, !chain.is_empty())
+            && chain.len() <= MAX_TOKENS
+        {
+            chain.push(s.clone());
+            if let Some(typ) = typing_oneshot.take() {
+                typ.send(true).ok();
             }
+            current_token = next;
         }
 
         if let Some(typ) = typing_oneshot.take() {
@@ -308,12 +313,12 @@ mod tests {
     }
 
     #[test]
-    fn at_least_2_tokens() {
+    fn at_least_1_token() {
         let mut brain = Brain::default();
         brain.ingest("hello world");
-        brain.ingest("hello");
-        brain.ingest("hello");
-        brain.ingest("hello");
+        for _ in 0..100 {
+            brain.ingest("hello");
+        }
 
         for _ in 0..100 {
             // I'm too lazy to mock lazyrand LOL!!
@@ -331,12 +336,12 @@ mod tests {
     }
 
     #[test]
-    fn none_on_end() {
+    fn random_on_end() {
         let mut brain = Brain::default();
         brain.ingest("world hello");
 
         let reply = brain.respond("hello", false, false, None);
-        assert_eq!(reply, None);
+        assert!(reply.is_some());
     }
 
     #[test]
