@@ -85,7 +85,7 @@ impl Brain {
     }
 
     fn parse(msg: &str) -> impl Iterator<Item = Token> {
-        msg.split_ascii_whitespace()
+        msg.split_whitespace()
             .filter_map(|w| {
                 // Filter out pings, they can get annoying
                 if w.starts_with("<@") && w.ends_with(">") {
@@ -105,7 +105,7 @@ impl Brain {
     }
 
     fn extract_final_word(msg: &str) -> Option<String> {
-        msg.split_ascii_whitespace()
+        msg.split_whitespace()
             .last()
             .and_then(Self::normalize_token)
     }
