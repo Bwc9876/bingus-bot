@@ -110,13 +110,21 @@ fn load_brain(path: &Path) -> Result<Option<Brain>> {
 }
 
 async fn save_brain(ctx: Arc<BotContext>) -> Result {
-    // TODO: Atomic saves
-    let mut file = File::create(&ctx.brain_file_path).context("Failed to open brain file")?;
+    let scratch_path = ctx.brain_file_path.with_file_name(format!(
+        "~{}",
+        ctx.brain_file_path.file_name().unwrap().to_str().unwrap()
+    ));
+    let mut file = File::create(&scratch_path).context("Failed to open brain file")?;
     let mut brotli_writer =
         brotli::CompressorWriter::with_params(&mut file, BROTLI_BUF_SIZE, &get_brotli_params());
+
     let brain = ctx.brain_handle.read().await;
     rmp_serde::encode::write(&mut brotli_writer, &*brain)
         .context("Failed to write serialized brain")?;
+
+    std::fs::rename(&scratch_path, &ctx.brain_file_path)
+        .context("Failed to override scratch file")?;
+
     debug!("Saved brain file");
     Ok(())
 }
