@@ -1,5 +1,4 @@
 {
-  pkgs,
   lib,
   config,
   ...
@@ -7,11 +6,11 @@
   cfg = config.services.bingus-bot;
 in {
   options.services.bingus-bot = {
-    enable = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      example = true;
-      description = "Whether to enable Bingus, a Discord bot that uses Markov Chains";
+    enable = lib.mkEnableOption "Bingus, a Discord bot that uses Markov Chains";
+
+    package = lib.mkOption {
+      description = "Package to use for bingus";
+      type = lib.types.package;
     };
 
     tokenFile = lib.mkOption {
@@ -48,8 +47,9 @@ in {
       };
 
       serviceConfig = {
-        ExecStart = lib.getExe pkgs.bingus;
+        ExecStart = lib.getExe cfg.package;
         Restart = "always";
+        RestartSec = "5s";
         StateDirectory = "bingus";
         StateDirectoryMode = "0755";
         LoadCredential = "token:${cfg.tokenFile}";

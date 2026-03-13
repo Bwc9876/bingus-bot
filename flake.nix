@@ -30,16 +30,14 @@
         selectToolchain = pkgs: pkgs.fenix.default;
         mkCrane = pkgs: (crane.mkLib pkgs).overrideToolchain (selectToolchain pkgs).toolchain;
         mkCraneStuff = pkgs: let
-          src = ./.;
+          craneLib = mkCrane pkgs;
           commonArgs = {
-            src = (mkCrane pkgs).cleanCargoSource src;
+            src = craneLib.cleanCargoSource ./.;
             strictDeps = true;
           };
-          craneLib = mkCrane pkgs;
           cargoArtifacts = craneLib.buildDepsOnly commonArgs;
         in {
           inherit
-            src
             commonArgs
             craneLib
             cargoArtifacts
@@ -61,6 +59,11 @@
           };
         };
         devShell = pkgs: (mkCrane pkgs).devShell {};
+        nixosModule = {lib, ...}: {
+          imports = ["./nixosModule.nix"];
+
+          services.bingus-bot.package = lib.mkDefault self.packages.default;
+        };
         package = {
           rustPlatform,
           lib,
