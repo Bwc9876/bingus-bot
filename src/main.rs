@@ -26,6 +26,7 @@ use brotli::enc::{BrotliEncoderParams, backward_references::BrotliEncoderMode};
 use log::{debug, error, info, warn};
 use prelude::*;
 use tokio::{
+    signal::unix::{SignalKind, signal},
     sync::RwLock,
     time::{self, Duration},
 };
@@ -212,7 +213,8 @@ async fn main() -> Result {
 
     let mut interval = time::interval(Duration::from_secs(60));
     interval.tick().await;
-    tokio::pin!(interval);
+
+    let mut sigterm = signal(SignalKind::terminate()).context("Failed to listen to SIGTERM")?;
 
     info!("Connecting to gateway...");
 
@@ -223,6 +225,10 @@ async fn main() -> Result {
 
             Ok(()) = tokio::signal::ctrl_c() => {
                 info!("SIGINT: Closing connection and saving");
+                shard.close(CloseFrame::NORMAL);
+            }
+            _ = sigterm.recv() => {
+                info!("SIGTERM: Closing connection and saving");
                 shard.close(CloseFrame::NORMAL);
             }
             _ = interval.tick() => {
