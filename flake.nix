@@ -60,7 +60,7 @@
         };
         devShell = pkgs: (mkCrane pkgs).devShell {};
         nixosModule = {lib, ...}: {
-          imports = ["./nixosModule.nix"];
+          imports = [./nixosModule.nix];
 
           services.bingus-bot.package = lib.mkDefault self.packages.default;
         };
