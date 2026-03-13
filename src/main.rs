@@ -1,6 +1,7 @@
-#![feature(test)]
+#![allow(unused_features)]
 #![feature(iter_map_windows)]
 #![feature(iter_intersperse)]
+#![feature(test)]
 
 mod brain;
 mod cmd;

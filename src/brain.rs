@@ -275,6 +275,7 @@ impl Brain {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use std::default::Default;
 
@@ -427,11 +428,13 @@ mod tests {
         });
     }
 
+    include!("lorem.rs");
+
     #[bench]
     fn bench_learn_large(b: &mut Bencher) {
         b.iter(|| {
             let mut brain = Brain::default();
-            brain.ingest(include_str!("lorem.txt"));
+            brain.ingest(LOREM);
         });
     }
 }
