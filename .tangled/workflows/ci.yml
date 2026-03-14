@@ -1,0 +1,14 @@
+when:
+  - event: ["manual", "push"]
+    branch: ["main"]
+
+engine: nixery
+
+dependencies:
+  nixpkgs:
+    - lix
+
+steps:
+  - name: Check Flake
+    command: |
+      nix flake check
