@@ -233,7 +233,9 @@ impl Brain {
                 .intersperse(&sep)
                 .cloned()
                 .collect::<String>();
-            Some(s).filter(|s| !s.trim().is_empty())
+            Some(s)
+                .filter(|s| !s.trim().is_empty())
+                .filter(|s| s.encode_utf16().count() < 2000)
         }
     }
 
@@ -386,6 +388,18 @@ mod tests {
 
         let reply = brain.respond("hello", false, false, None);
         assert_eq!(reply, None);
+    }
+
+    #[test]
+    fn none_on_long() {
+        let mut brain = Brain::default();
+
+        let msg = vec!["a"; 2500].into_iter().collect::<String>();
+        let msg = format!("hello {msg}");
+
+        brain.ingest(&msg);
+
+        assert!(brain.respond("hello", false, false, None).is_none())
     }
 
     #[test]
