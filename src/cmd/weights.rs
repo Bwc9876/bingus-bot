@@ -20,16 +20,20 @@ async fn get_output(token: &str, brain: &BrainHandle) -> Option<String> {
 
     brain.get_weights(token).map(|edges| {
         let sep = String::from("\n");
-        let all_weights = edges
-            .iter_weights()
+        let mut all_weights = edges.iter_weights().collect::<Vec<_>>();
+
+        all_weights.sort_by_key(|(_, w, _)| *w);
+
+        let formatted_weights = all_weights
+            .into_iter()
             .map(|(token, weight, chance)| {
                 let token_fmt = format_token(token);
-                format!("- **{token_fmt}**: {:.1}% ({weight})", chance * 100.0)
+                format!("{token_fmt}: {:.1}% ({weight})", chance * 100.0)
             })
             .intersperse(sep)
             .collect::<String>();
 
-        format!("Weights for {token}:\n{all_weights}")
+        format!("Weights for {token}:\n{formatted_weights}")
     })
 }
 
