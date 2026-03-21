@@ -1,4 +1,5 @@
 mod dump_chain;
+mod forget;
 mod load_chain;
 mod markov;
 mod weights;
@@ -16,6 +17,7 @@ use twilight_model::http::interaction::{
 use crate::{BotContext, prelude::*};
 
 use dump_chain::DumpChainCommand;
+use forget::ForgetCommand;
 use load_chain::LoadChainCommand;
 use markov::MarkovCommand;
 use weights::WeightsCommand;
@@ -66,6 +68,7 @@ pub async fn register_all_commands(ctx: Arc<BotContext>) -> Result {
         DumpChainCommand::create_command().into(),
         LoadChainCommand::create_command().into(),
         MarkovCommand::create_command().into(),
+        ForgetCommand::create_command().into(),
     ];
 
     let client = ctx.http.interaction(ctx.app_id);
@@ -88,6 +91,7 @@ pub async fn handle_app_command(
         "dump_chain" => DumpChainCommand::handle(inter, data, ctx).await,
         "load_chain" => LoadChainCommand::handle(inter, data, ctx).await,
         "markov" => MarkovCommand::handle(inter, data, ctx).await,
+        "forget" => ForgetCommand::handle(inter, data, ctx).await,
         other => {
             warn!("Unknown command send: {other}");
             Ok(())

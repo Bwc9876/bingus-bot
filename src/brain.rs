@@ -65,6 +65,12 @@ impl Edges {
         None
     }
 
+    pub fn forget(&mut self, token: &Token) {
+        if let Some(w) = self.0.remove(token) {
+            self.1 -= w as u64;
+        }
+    }
+
     pub fn iter_weights(&self) -> impl Iterator<Item = (&Token, Weight, f64)> {
         self.0
             .iter()
@@ -135,6 +141,16 @@ impl Brain {
             })
             .reduce(|acc, c| acc || c)
             .unwrap_or_default()
+    }
+
+    pub fn forget(&mut self, word: &str) {
+        let tok = Self::normalize_token(word);
+
+        self.0.remove(&tok);
+
+        for edge in self.0.values_mut() {
+            edge.forget(&tok);
+        }
     }
 
     pub fn merge_from(&mut self, other: Self) {
@@ -226,7 +242,9 @@ impl Brain {
     }
 
     pub fn get_weights(&self, tok: &str) -> Option<&Edges> {
-        self.0.get(&Self::normalize_token(tok))
+        self.0
+            .get(&Self::normalize_token(tok))
+            .filter(|e| !e.0.is_empty())
     }
 
     fn legacy_token_format(tok: &Token) -> String {
@@ -336,6 +354,30 @@ mod tests {
             let reply = brain.respond("hello", false, false, None);
             assert_eq!(reply, Some("world".to_string()));
         }
+    }
+
+    #[test]
+    fn forget_word() {
+        let mut brain = Brain::default();
+
+        brain.ingest("hello world");
+        brain.ingest("hello evil world");
+
+        brain.forget("evil");
+
+        assert!(
+            !brain.0.contains_key(&Some(String::from("evil"))),
+            "Edges still exist for evil"
+        );
+        let edges = brain
+            .0
+            .get(&Some(String::from("hello")))
+            .expect("No weights for hello");
+        assert!(
+            !edges.0.contains_key(&Some(String::from("evil"))),
+            "Edges for hello still has evil"
+        );
+        assert_eq!(edges.1, 1);
     }
 
     #[test]

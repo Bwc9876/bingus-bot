@@ -39,6 +39,7 @@ dev portal to make multiple people owner.
 
 - `/markov`: For a reply from Bingus in the current channel
 - `/weights`: View the weights for a specific token
+- *`/forget`: Clear a word from memory, this gets rid of any instance of the token
 - *`/dump_chain`: Dump Bingus' "brain", his entire database of known words and relations
 - *`/load_chain`: Additively load a brain file into Bingus
 
