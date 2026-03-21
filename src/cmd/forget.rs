@@ -1,9 +1,11 @@
-use std::sync::Arc;
+use std::sync::{Arc, atomic::Ordering};
 
 use twilight_interactions::command::{CommandModel, CreateCommand};
 use twilight_model::application::interaction::{Interaction, application_command::CommandData};
 
-use crate::{BotContext, cmd::DEFER_INTER_RESP_EPHEMERAL, prelude::*, require_owner};
+use crate::{
+    BotContext, cmd::DEFER_INTER_RESP_EPHEMERAL, prelude::*, require_owner, status::update_status,
+};
 
 #[derive(CommandModel, CreateCommand)]
 #[command(
@@ -32,6 +34,8 @@ impl ForgetCommand {
         {
             let mut brain = ctx.brain_handle.write().await;
             brain.forget(token.as_str());
+            ctx.pending_save.store(true, Ordering::Relaxed);
+            update_status(&brain, &ctx.shard_sender).context("Failed to update status")?;
         }
 
         client
