@@ -153,6 +153,15 @@ impl Brain {
         }
     }
 
+    pub fn forget_edge(&mut self, from: &str, to: &str) -> bool {
+        if let Some(edges) = self.0.get_mut(&Self::normalize_token(from)) {
+            edges.forget(&Self::normalize_token(to));
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn merge_from(&mut self, other: Self) {
         for (k, v) in other.0.into_iter() {
             if let Some(edges) = self.0.get_mut(&k) {
@@ -378,6 +387,37 @@ mod tests {
         assert!(
             !edges.0.contains_key(&Some(String::from("evil"))),
             "Edges for hello still has evil"
+        );
+        assert_eq!(edges.1, 1);
+    }
+
+    #[test]
+    fn forget_edge() {
+        let mut brain = Brain::default();
+
+        brain.ingest("hello world");
+        brain.ingest("hello evil");
+        brain.ingest("evil bad");
+
+        let exists = brain.forget_edge("hello", "evil");
+
+        assert!(exists, "hello -> evil did not exist");
+
+        assert!(
+            brain.0.contains_key(&Some(String::from("evil"))),
+            "Edges don't exist for evil"
+        );
+        let edges = brain
+            .0
+            .get(&Some(String::from("hello")))
+            .expect("No weights for hello");
+        assert!(
+            !edges.0.contains_key(&Some(String::from("evil"))),
+            "Edges for hello still has evil"
+        );
+        assert!(
+            edges.0.contains_key(&Some(String::from("world"))),
+            "Edges for hello does not have world"
         );
         assert_eq!(edges.1, 1);
     }
