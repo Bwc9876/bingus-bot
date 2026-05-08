@@ -179,6 +179,8 @@ async fn main() -> Result {
     };
     let brain_handle = RwLock::new(brain);
 
+    info!("Fetching App Info from Discord...");
+
     // Init
     let mut shard = Shard::new(ShardId::ONE, token.to_string(), intents);
     let http = HttpClient::new(token.to_string());
