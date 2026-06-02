@@ -1,11 +1,11 @@
 [package]
-name = "bingus-bot"
+name    = "bingus-bot"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 anyhow = "1"
-brotli = "8"
+brotli = "9"
 colog = "1"
 fastrand = "2"
 log = "0.4"
