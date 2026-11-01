@@ -1,4 +1,3 @@
-use log::debug;
 use twilight_gateway::MessageSender;
 use twilight_model::gateway::{
     payload::outgoing::UpdatePresence,
@@ -27,6 +26,9 @@ pub fn update_status(brain: &Brain, sender: &MessageSender) -> Result {
         state: Some(format!("I know {words} words!")),
         timestamps: None,
         url: None,
+        details_url: None,
+        state_url: None,
+        status_display_type: None,
     };
 
     let status = UpdatePresence::new(vec![activity], false, None, Status::Online)
@@ -36,6 +38,5 @@ pub fn update_status(brain: &Brain, sender: &MessageSender) -> Result {
         .command(&status)
         .context("Failed to send to gateway")?;
 
-    debug!("Sent status update");
     Ok(())
 }

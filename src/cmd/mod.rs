@@ -49,16 +49,18 @@ const DEFER_INTER_RESP_EPHEMERAL: InteractionResponse = InteractionResponse {
 #[macro_export]
 macro_rules! require_owner {
     ($inter:expr, $ctx:expr, $client:expr) => {
-        if $inter.author_id().is_none_or(|id| !$ctx.owners.contains(&id)) {
-            let data = twilight_util::builder::InteractionResponseDataBuilder::new()
-                        .content("You're not allowed to run this command!")
-                        .flags(twilight_model::channel::message::MessageFlags::EPHEMERAL)
-                        .build();
-            let resp = twilight_model::http::interaction::InteractionResponse {
-                kind: twilight_model::http::interaction::InteractionResponseType::ChannelMessageWithSource,
-                data: Some(data),
-            };
-            $client.create_response($inter.id, &$inter.token, &resp).await.context("Failed to deny perms")?;
+        if $inter
+            .author_id()
+            .is_none_or(|id| !$ctx.owners.contains(&id))
+        {
+            let resp = twilight_util::builder::interaction_response::ChannelMessageBuilder::new()
+                .content("You're not allowed to run this command!")
+                .flags(twilight_model::channel::message::MessageFlags::EPHEMERAL)
+                .build();
+            $client
+                .create_response($inter.id, &$inter.token, &resp)
+                .await
+                .context("Failed to deny perms")?;
             return Ok(());
         }
     };

@@ -1,5 +1,5 @@
 [package]
-name    = "bingus-bot"
+name = "bingus-bot"
 version = "0.1.0"
 edition = "2024"
 
@@ -19,8 +19,8 @@ tokio = { version = "1", features = [
   "fs",
   "signal",
 ] }
-twilight-gateway = "0.17"
-twilight-http = "0.17"
-twilight-interactions = "0.17"
-twilight-model = "0.17"
-twilight-util = { version = "0.17", features = ["builder"] }
+twilight-gateway = "0.18"
+twilight-http = "0.18"
+twilight-interactions = "0.18"
+twilight-model = "0.18"
+twilight-util = { version = "0.18", features = ["builder"] }
